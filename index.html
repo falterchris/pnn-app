@@ -2,174 +2,245 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>PNN EVENT</title>
-    
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icon-192x192.png">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Event App</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
-    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --safe-top: env(safe-area-inset-top, 20px);
+        }
         body {
-            background: #121212;
-            color: #f3f4f6;
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            padding-bottom: 50px;
+            background-color: #f3f4f6;
+            padding-top: calc(var(--safe-top) + 40px); /* Menü weiter runter */
         }
-        .page { display: none; min-height: 100vh; padding: 60px 20px; }
-        .page.active { display: block; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        /* Kachel-Design wie im Screenshot */
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            max-width: 500px;
-            margin: 0 auto;
-        }
-        .tile {
-            background: #E1BEE7; /* Dein Pastell-Rosa */
-            color: #4A148C;
-            aspect-ratio: 1/1.1;
-            border-radius: 20px;
+        .grid-tile {
+            aspect-ratio: 1 / 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 10px;
-            text-align: center;
-            transition: transform 0.1s;
+            border-radius: 1.5rem;
+            transition: transform 0.2s;
+            cursor: pointer;
         }
-        .tile:active { transform: scale(0.95); }
-        .tile span { font-size: 8px; font-weight: 700; text-transform: uppercase; margin-top: 8px; line-height: 1.1; }
-
-        /* Header & Back */
-        .nav-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; position: fixed; top: 0; width: 100%; z-index: 100; }
-        .back-btn { background: rgba(255,255,255,0.1); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
-
-        /* Akkordeon für Agenda */
-        details { background: rgba(255,255,255,0.05); border-radius: 15px; margin-bottom: 10px; overflow: hidden; }
-        summary { padding: 15px; font-weight: bold; cursor: pointer; list-style: none; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .content { padding: 15px; background: rgba(0,0,0,0.2); }
+        .grid-tile:active {
+            transform: scale(0.95);
+        }
+        /* Größere Schrift bei Kacheln laut Feedback */
+        .tile-text {
+            font-size: 1.25rem; 
+            font-weight: 600;
+            margin-top: 0.75rem;
+        }
+        .view-header {
+            padding-top: var(--safe-top);
+        }
     </style>
 </head>
-<body>
+<body class="p-4">
 
-    <div class="nav-header">
-        <button id="global-back" onclick="showPage('home')" class="back-btn" style="visibility: hidden;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-        </button>
-        <div class="relative">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            <div class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">3</div>
+    <div class="fixed top-0 left-0 right-0 flex justify-between items-center px-6" style="padding-top: calc(var(--safe-top) + 10px);">
+        <button onclick="showHome()" class="text-2xl text-gray-700"><i class="fas fa-arrow-left"></i></button>
+        <button class="text-2xl text-gray-700"><i class="fas fa-bell"></i></button>
+    </div>
+
+    <div id="home-view" class="grid grid-cols-2 gap-4 mt-8">
+        <div onclick="showView('agenda')" class="grid-tile bg-blue-500 text-white">
+            <i class="fas fa-calendar-alt text-4xl"></i>
+            <span class="tile-text">Agenda</span>
+        </div>
+        <div onclick="showView('my-agenda')" class="grid-tile bg-purple-500 text-white">
+            <i class="fas fa-star text-4xl"></i>
+            <span class="tile-text">My Agenda</span>
+        </div>
+        <div onclick="showView('workshop')" class="grid-tile bg-green-500 text-white">
+            <i class="fas fa-tools text-4xl"></i>
+            <span class="tile-text">Workshop</span>
+        </div>
+        <div onclick="showView('transport')" class="grid-tile bg-yellow-500 text-white">
+            <i class="fas fa-bus text-4xl"></i>
+            <span class="tile-text">Transport</span>
+        </div>
+        <div onclick="showView('run')" class="grid-tile bg-red-500 text-white">
+            <i class="fas fa-running text-4xl"></i>
+            <span class="tile-text">Morning Run</span>
+        </div>
+        <div onclick="showView('gallery')" class="grid-tile bg-pink-500 text-white">
+            <i class="fas fa-images text-4xl"></i>
+            <span class="tile-text">Gallery</span>
+        </div>
+        <div onclick="showView('feedback')" class="grid-tile bg-indigo-500 text-white">
+            <i class="fas fa-comment-dots text-4xl"></i>
+            <span class="tile-text">Feedback</span>
+        </div>
+        <div onclick="showView('contact')" class="grid-tile bg-orange-500 text-white">
+            <i class="fas fa-address-book text-4xl"></i>
+            <span class="tile-text">Contact</span>
         </div>
     </div>
 
-    <div id="home" class="page active">
-        <header class="text-center mb-10 mt-5">
-            <h1 class="text-4xl font-black italic uppercase">PNN EVENT</h1>
-            <p class="text-xs tracking-[0.3em] opacity-50">SPRING SUMMER 2026</p>
-        </header>
-
-        <div class="grid-container">
-            <button onclick="showPage('agenda')" class="tile">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-                <span>Agenda</span>
-            </button>
-            <button onclick="showPage('groups')" class="tile">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                <span>Groups</span>
-            </button>
-            <button onclick="showPage('workshop')" class="tile">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-                <span>Workshop</span>
-            </button>
-            <button onclick="showPage('locations')" class="tile">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                <span>Locations</span>
-            </button>
-            <button onclick="showPage('transport')" class="tile">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="3" width="12" height="13" rx="2"/><path d="M9 16l-1 4M15 16l1 4M9 6h6M9 10h6"/></svg>
-                <span>Transport</span>
-            </button>
-            <button onclick="showPage('run')" class="tile">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 4v4M17 4v4M10 9l5 3-5 3"/></svg>
-                <span>Morning Run</span>
-            </button>
-            <button onclick="showPage('gallery')" class="tile">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                <span>Gallery</span>
-            </button>
-            <button onclick="showPage('feedback')" class="tile">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-11.7 8.38 8.38 0 0 1 3.8.9L21 3z"/></svg>
-                <span>Feedback</span>
-            </button>
-            <button onclick="showPage('contact')" class="tile">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                <span>Contact</span>
-            </button>
-        </div>
-    </div>
-
-    <div id="agenda" class="page">
-        <h2 class="text-2xl font-black mb-6">AGENDA</h2>
-        
-        <details>
-            <summary>MITTWOCH 26/03 <span>▼</span></summary>
-            <div class="content">
-                <details>
-                    <summary class="text-sm">Gruppe: Sales North <span>▼</span></summary>
-                    <div class="p-4 text-xs">
-                        <p class="font-bold">09:00</p><p class="mb-2">Ankunft & Check-in</p>
-                        <hr class="opacity-10 my-2">
-                        <p class="font-bold">10:30</p><p>Regional Strategy Workshop</p>
-                    </div>
-                </details>
-                <details><summary class="text-sm">Gruppe: Sales South <span>▼</span></summary><div class="p-4 text-xs italic text-gray-400">Programm folgt...</div></details>
-                <details><summary class="text-sm">Gruppe: Marketing <span>▼</span></summary><div class="p-4 text-xs italic text-gray-400">Programm folgt...</div></details>
+    <div id="detail-view" class="hidden mt-8">
+        <h2 id="view-title" class="text-3xl font-bold mb-6 text-gray-800">Titel</h2>
+        <div id="view-content" class="bg-white rounded-3xl p-6 shadow-sm">
             </div>
-        </details>
-
-        <details>
-            <summary>DONNERSTAG 27/03 <span>▼</span></summary>
-            <div class="content">
-                <p class="text-xs mb-4 uppercase font-bold text-[#E1BEE7]">Morning Run ab 07:00 Uhr</p>
-                <details><summary class="text-sm">Alle Gruppen <span>▼</span></summary><div class="p-4 text-xs">Gemeinsames Frühstück</div></details>
-            </div>
-        </details>
-    </div>
-
-    <div id="gallery" class="page">
-        <h2 class="text-2xl font-black mb-6">GALLERY</h2>
-        <div class="grid grid-cols-2 gap-2">
-            <div class="aspect-square bg-white/10 rounded-lg flex items-center justify-center italic text-[10px]">Bild 1</div>
-            <div class="aspect-square bg-white/10 rounded-lg flex items-center justify-center italic text-[10px]">Bild 2</div>
-            <div class="aspect-square bg-white/10 rounded-lg flex items-center justify-center italic text-[10px]">Bild 3</div>
-            <div class="aspect-square bg-white/10 rounded-lg flex items-center justify-center italic text-[10px]">Bild 4</div>
-        </div>
-        <p class="mt-4 text-[10px] opacity-50 text-center uppercase">Upload über Backend (Cloudinary)</p>
-    </div>
-
-    <div id="feedback" class="page">
-        <h2 class="text-2xl font-black mb-6">FEEDBACK</h2>
-        <div class="bg-white/5 p-6 rounded-2xl">
-            <label class="block text-[10px] uppercase font-bold mb-2">Deine Nachricht</label>
-            <textarea class="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-sm mb-4" rows="4" placeholder="Wie gefällt dir das Event?"></textarea>
-            <button class="w-full bg-[#E1BEE7] text-[#4A148C] font-black py-4 rounded-xl uppercase text-xs">Senden</button>
-        </div>
     </div>
 
     <script>
-        function showPage(id) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            document.getElementById('global-back').style.visibility = (id === 'home') ? 'hidden' : 'visible';
-            window.scrollTo(0,0);
+        let myAgenda = JSON.parse(localStorage.getItem('myAgenda')) || [];
+
+        function showView(view) {
+            document.getElementById('home-view').classList.add('hidden');
+            document.getElementById('detail-view').classList.remove('hidden');
+            const content = document.getElementById('view-content');
+            const title = document.getElementById('view-title');
+            content.innerHTML = '';
+
+            if (view === 'agenda') {
+                title.innerText = 'Agenda';
+                for(let d=1; d<=4; d++) {
+                    let dayHtml = `<div class="mb-8"><h3 class="text-xl font-bold text-blue-600 border-b-2 pb-2 mb-4">Tag ${d}</h3>`;
+                    for(let g=1; g<=6; g++) {
+                        dayHtml += `<div class="mb-4 ml-2"><h4 class="font-bold text-gray-700">Gruppe ${g}</h4>`;
+                        for(let i=1; i<=10; i++) {
+                            const itemId = `d${d}-g${g}-i${i}`;
+                            const isStarred = myAgenda.includes(itemId);
+                            dayHtml += `
+                                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                                    <span>${08+i}:00 - Programmpunkt ${i}</span>
+                                    <button onclick="toggleStar('${itemId}')" id="star-${itemId}" class="text-xl ${isStarred ? 'text-yellow-500' : 'text-gray-300'}">
+                                        <i class="fas fa-star"></i>
+                                    </button>
+                                </div>`;
+                        }
+                        dayHtml += `</div>`;
+                    }
+                    dayHtml += `</div>`;
+                    content.innerHTML += dayHtml;
+                }
+            } 
+            
+            else if (view === 'my-agenda') {
+                title.innerText = 'Meine Agenda';
+                if(myAgenda.length === 0) {
+                    content.innerHTML = '<p class="text-gray-500 italic">Noch keine Punkte markiert. Klicke in der Agenda auf den Stern!</p>';
+                } else {
+                    myAgenda.forEach(id => {
+                        content.innerHTML += `<div class="p-3 mb-2 bg-purple-50 rounded-lg border border-purple-100">${id.replace('d', 'Tag ').replace('-g', ', Gruppe ').replace('-i', ', Punkt ')}</div>`;
+                    });
+                }
+            }
+
+            else if (view === 'workshop') {
+                title.innerText = 'Workshops';
+                content.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="p-4 bg-green-50 rounded-xl">
+                            <h4 class="font-bold">Design Thinking</h4>
+                            <p class="text-sm text-gray-600">Raum: Berlin | 14:00 Uhr</p>
+                            <p class="mt-2 text-xs">Grundlagen der kreativen Problemlösung im Team.</p>
+                        </div>
+                        <div class="p-4 bg-green-50 rounded-xl">
+                            <h4 class="font-bold">KI im Marketing</h4>
+                            <p class="text-sm text-gray-600">Raum: München | 16:00 Uhr</p>
+                        </div>
+                    </div>`;
+            }
+
+            else if (view === 'transport') {
+                title.innerText = 'Transport';
+                content.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-4 p-3 border-l-4 border-yellow-500 bg-gray-50">
+                            <i class="fas fa-shuttle-van text-yellow-600"></i>
+                            <div><strong>Hotel Shuttle</strong><br><span class="text-xs">Alle 20 Min. vor dem Haupteingang</span></div>
+                        </div>
+                        <div class="flex items-center gap-4 p-3 border-l-4 border-yellow-500 bg-gray-50">
+                            <i class="fas fa-taxi text-yellow-600"></i>
+                            <div><strong>Taxi-Zentrale</strong><br><span class="text-xs">+49 123 456789</span></div>
+                        </div>
+                    </div>`;
+            }
+
+            else if (view === 'run') {
+                title.innerText = 'Morning Run';
+                content.innerHTML = `
+                    <div class="text-center">
+                        <img src="https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?auto=format&fit=crop&w=300&q=80" class="rounded-2xl mb-4 w-full h-40 object-cover">
+                        <p class="font-bold">Start: 07:00 Uhr Lobby</p>
+                        <p class="text-sm text-gray-600 mt-2">Wir laufen gemeinsam eine 5km-Runde durch den Park. Alle Level willkommen!</p>
+                    </div>`;
+            }
+
+            else if (view === 'gallery') {
+                title.innerText = 'Galerie';
+                for(let d=1; d<=4; d++) {
+                    content.innerHTML += `
+                        <details class="mb-4">
+                            <summary class="font-bold p-3 bg-gray-100 rounded-lg cursor-pointer">Tag ${d} Fotos</summary>
+                            <div class="grid grid-cols-2 gap-2 p-2">
+                                <div class="h-24 bg-gray-300 rounded-lg flex items-center justify-center text-xs text-gray-500">Beispielbild</div>
+                                <div class="h-24 bg-gray-300 rounded-lg flex items-center justify-center text-xs text-gray-500">Beispielbild</div>
+                            </div>
+                        </details>`;
+                }
+            }
+
+            else if (view === 'feedback') {
+                title.innerText = 'Feedback';
+                content.innerHTML = `
+                    <div class="space-y-6">
+                        <p class="text-sm">Bitte hilf uns, das Event zu verbessern:</p>
+                        <div>
+                            <label class="block text-sm font-medium">Wie gefällt dir das Catering?</label>
+                            <div class="flex gap-2 mt-1">
+                                <button class="p-2 border rounded">⭐️</button><button class="p-2 border rounded">⭐️</button><button class="p-2 border rounded">⭐️</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium">War die Anreise unkompliziert?</label>
+                            <textarea class="w-full border rounded-lg p-2 mt-1 text-sm" rows="3" placeholder="Dein Kommentar..."></textarea>
+                        </div>
+                        <button class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold">Feedback absenden</button>
+                    </div>`;
+            }
+
+            else if (view === 'contact') {
+                title.innerText = 'Kontakt';
+                const contacts = [
+                    {n: 'Max Mustermann', r: 'Event Manager', p: '+49 151 000001', m: 'max@event.com'},
+                    {n: 'Sarah Sommer', r: 'Support & Logistik', p: '+49 151 000002', m: 'sarah@event.com'},
+                    {n: 'Hotel Rezeption', r: 'Unterkunft', p: '+49 89 123456', m: 'info@hotel.de'}
+                ];
+                contacts.forEach(c => {
+                    content.innerHTML += `
+                        <div class="mb-6 p-4 border rounded-2xl shadow-sm">
+                            <div class="font-bold text-lg">${c.n}</div>
+                            <div class="text-sm text-gray-500 mb-3">${c.r}</div>
+                            <div class="flex gap-4">
+                                <a href="tel:${c.p}" class="flex-1 bg-gray-100 p-2 rounded-lg text-center"><i class="fas fa-phone"></i></a>
+                                <a href="mailto:${c.m}" class="flex-1 bg-gray-100 p-2 rounded-lg text-center"><i class="fas fa-envelope"></i></a>
+                            </div>
+                        </div>`;
+                });
+            }
+        }
+
+        function toggleStar(id) {
+            const index = myAgenda.indexOf(id);
+            if(index > -1) {
+                myAgenda.splice(index, 1);
+                document.getElementById('star-'+id).classList.replace('text-yellow-500', 'text-gray-300');
+            } else {
+                myAgenda.push(id);
+                document.getElementById('star-'+id).classList.replace('text-gray-300', 'text-yellow-500');
+            }
+            localStorage.setItem('myAgenda', JSON.stringify(myAgenda));
+        }
+
+        function showHome() {
+            document.getElementById('home-view').classList.remove('hidden');
+            document.getElementById('detail-view').classList.add('hidden');
         }
     </script>
 </body>
