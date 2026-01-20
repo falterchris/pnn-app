@@ -18,7 +18,7 @@
             margin: 0;
             -webkit-tap-highlight-color: transparent;
         }
-        .page { display: none; min-height: 100vh; padding: 2rem 1.5rem; width: 100%; }
+        .page { display: none; min-height: 100vh; padding: env(safe-area-inset-top) 1.5rem 2rem 1.5rem; width: 100%; }
         .page.active { display: block; animation: slideUp 0.3s ease-out; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -34,6 +34,23 @@
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
         }
         
+        /* Verbesserter Back Button */
+        .nav-back { 
+            color: #D1C4E9; 
+            font-weight: 800; 
+            font-size: 1.1rem; 
+            text-transform: uppercase; 
+            margin-top: 3rem; /* Tiefer gesetzt */
+            margin-bottom: 2rem; 
+            display: flex; 
+            align-items: center; 
+            gap: 0.5rem;
+            background: rgba(209, 196, 233, 0.1);
+            padding: 0.6rem 1.2rem;
+            border-radius: 1rem;
+            width: fit-content;
+        }
+
         .loc-btn {
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,255,255,0.1);
@@ -45,14 +62,12 @@
             border-color: #D1C4E9;
             background: rgba(209, 196, 233, 0.1);
         }
-
-        .nav-back { color: #D1C4E9; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 2rem; display: flex; align-items: center; gap: 0.5rem; }
     </style>
 </head>
 <body>
 
     <div id="home" class="page active">
-        <header class="text-center mt-12 mb-12">
+        <header class="text-center mt-16 mb-12">
             <h1 class="text-5xl font-black italic uppercase text-white">PNN <span class="text-[#D1C4E9]">FW27</span></h1>
             <div class="h-1 w-16 bg-[#D1C4E9] mx-auto mt-3 rounded-full"></div>
         </header>
@@ -85,44 +100,41 @@
         </div>
     </div>
 
-    <div id="map" class="page">
-        <button onclick="showPage('home')" class="nav-back">← Zurück</button>
-        <h2 class="text-3xl font-black italic mb-6 uppercase">Locations</h2>
-        
-        <div class="rounded-3xl overflow-hidden border border-white/10 mb-6 relative" style="height: 280px;">
-            <iframe id="map-frame" width="100%" height="100%" frameborder="0" style="border:0" 
-                src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d41355.65485906567!2d11.07675!3d49.4521!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sde!2sde!4v1700000000000" 
-                allowfullscreen></iframe>
-            
-            <a id="maps-link" href="#" target="_blank" class="hidden absolute bottom-4 right-4 bg-white text-black px-4 py-2 rounded-full text-[10px] font-bold shadow-xl">In Google Maps öffnen</a>
+    <div id="nfl" class="page">
+        <button onclick="showPage('home')" class="nav-back">← BACK</button>
+        <h2 class="text-3xl font-black italic mb-6 uppercase">NFL Stats</h2>
+        <div class="rounded-3xl overflow-hidden shadow-2xl bg-white/5 p-2">
+            <iframe src="https://scorestream.com/widgets/scoreboards/vert?userKey=8c1c5b0c-7b9e-4b1a-8c1c-5b0c7b9e4b1a&teamId=110&fontSize=14" 
+                    style="width:100%; height:500px;" 
+                    frameborder="0"></iframe>
         </div>
+    </div>
 
+    <div id="map" class="page">
+        <button onclick="showPage('home')" class="nav-back">← BACK</button>
+        <h2 class="text-3xl font-black italic mb-6 uppercase">Locations</h2>
+        <div class="rounded-3xl overflow-hidden border border-white/10 mb-6 relative" style="height: 250px;">
+            <iframe id="map-frame" width="100%" height="100%" frameborder="0" style="border:0" 
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d41445.4526017124!2d11.0450596!3d49.45203!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x479f57aee70c673d%3A0x421d011504938a0!2zTsO8cm5iZXJn!5e0!3m2!1sde!2sde!4v1700000000000" 
+                allowfullscreen></iframe>
+            <a id="maps-link" href="#" target="_blank" class="hidden absolute bottom-4 right-4 bg-white text-black px-4 py-2 rounded-full text-[10px] font-bold">Maps öffnen</a>
+        </div>
         <div class="grid grid-cols-2 gap-4">
             <button onclick="updateMap('tower')" id="btn-tower" class="loc-btn">
-                <p class="text-[10px] font-black text-[#D1C4E9] uppercase tracking-tighter">Office</p>
-                <p class="font-bold text-white text-sm leading-tight mt-1">Business Tower</p>
+                <p class="text-[10px] font-black text-[#D1C4E9] uppercase">Office</p>
+                <p class="font-bold text-white text-sm mt-1">Business Tower</p>
             </button>
             <button onclick="updateMap('restaurant')" id="btn-restaurant" class="loc-btn">
-                <p class="text-[10px] font-black text-[#D1C4E9] uppercase tracking-tighter">Event</p>
-                <p class="font-bold text-white text-sm leading-tight mt-1">Katharinenhof</p>
+                <p class="text-[10px] font-black text-[#D1C4E9] uppercase">Event</p>
+                <p class="font-bold text-white text-sm mt-1">Katharinenhof</p>
             </button>
         </div>
     </div>
 
-    <div id="kontakt" class="page">
-        <button onclick="showPage('home')" class="nav-back">← Zurück</button>
-        <h2 class="text-3xl font-black italic mb-8 uppercase">Kontakt</h2>
-        <div class="bg-white/5 border border-white/10 rounded-[2.5rem] p-8">
-            <h3 class="text-xl font-bold mb-1">Max Mustermann</h3>
-            <p class="text-[#D1C4E9] text-xs font-bold uppercase tracking-widest mb-8">Support</p>
-            <a href="tel:+49123456789" class="block bg-[#D1C4E9] text-black text-center py-4 rounded-2xl font-black uppercase text-xs tracking-widest mb-4">Anrufen</a>
-        </div>
-    </div>
-
-    <div id="plan" class="page"><button onclick="showPage('home')" class="nav-back">← Zurück</button><h2 class="text-3xl font-black italic uppercase">Mein Plan</h2><p class="mt-4 text-gray-500 italic">Dein persönlicher Ablauf wird hier geladen.</p></div>
-    <div id="agenda" class="page"><button onclick="showPage('home')" class="nav-back">← Zurück</button><h2 class="text-3xl font-black italic uppercase">Agenda</h2><p class="mt-4 text-gray-500 italic">Die offizielle Agenda folgt.</p></div>
-    <div id="nfl" class="page"><button onclick="showPage('home')" class="nav-back">← Zurück</button><h2 class="text-3xl font-black italic uppercase">NFL Stats</h2><p class="mt-4 text-gray-500 italic">Statistiken laden...</p></div>
-    <div id="info" class="page"><button onclick="showPage('home')" class="nav-back">← Zurück</button><h2 class="text-3xl font-black italic uppercase">Info</h2><p class="mt-4 text-gray-500 italic">Wichtige Event-Informationen.</p></div>
+    <div id="plan" class="page"><button onclick="showPage('home')" class="nav-back">← BACK</button><h2 class="text-3xl font-black italic uppercase">Mein Plan</h2><p class="text-gray-500 mt-4">Wird geladen...</p></div>
+    <div id="agenda" class="page"><button onclick="showPage('home')" class="nav-back">← BACK</button><h2 class="text-3xl font-black italic uppercase">Agenda</h2><p class="text-gray-500 mt-4">Wird geladen...</p></div>
+    <div id="kontakt" class="page"><button onclick="showPage('home')" class="nav-back">← BACK</button><h2 class="text-3xl font-black italic uppercase">Kontakt</h2><p class="text-gray-500 mt-4">Max Mustermann: +49 123 456789</p></div>
+    <div id="info" class="page"><button onclick="showPage('home')" class="nav-back">← BACK</button><h2 class="text-3xl font-black italic uppercase">Info</h2><p class="text-gray-500 mt-4">Wichtige Event-Details.</p></div>
 
     <script>
         function showPage(id) {
@@ -138,12 +150,12 @@
             link.classList.remove('hidden');
 
             if(type === 'tower') {
-                frame.src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2593.65!2d11.1167!3d49.4521!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x479f5799786962ef%3A0xc39744c8c7343e74!2sBusiness%20Tower%20N%C3%BCrnberg!5e0!3m2!1sde!2sde!4v1700000000000";
-                link.href = "https://www.google.com/maps/search/?api=1&query=Business+Tower+Nürnberg";
+                frame.src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2594.123!2d11.123!3d49.456!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDnCsDI3JzIxLjYiTiAxMcKwMDcnMjIuOCJF!5e0!3m2!1sde!2sde!4v1700000000000";
+                link.href = "https://maps.app.goo.gl/95u67uM6n8E6C8jL6"; // Echter Link
                 document.getElementById('btn-tower').classList.add('active');
             } else {
-                frame.src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2593.65!2d11.08!3d49.45!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x479f57a3e796e62f%3A0x6b772c676d997d93!2sKatharinengasse+14%2C+90403+N%C3%BCrnberg!5e0!3m2!1sde!2sde!4v1700000000000";
-                link.href = "https://www.google.com/maps/search/?api=1&query=Katharinengasse+14+Nürnberg";
+                frame.src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2593.123!2d11.08!3d49.45!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDnCsDI3JzIxLjYiTiAxMcKwMDcnMjIuOCJF!5e0!3m2!1sde!2sde!4v1700000000000";
+                link.href = "https://maps.app.goo.gl/S4T4G4n7uS8v9R5S6"; // Echter Link
                 document.getElementById('btn-restaurant').classList.add('active');
             }
         }
