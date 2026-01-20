@@ -7,9 +7,7 @@
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="PNN FW27">
     <link rel="apple-touch-icon" href="icon-192x192.png">
-    <link rel="manifest" href="manifest.json">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -39,6 +37,19 @@
         }
         .tile:active { transform: scale(0.92); background-color: #B39DDB; }
         
+        .loc-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 1.25rem;
+            padding: 1rem;
+            text-align: left;
+            transition: all 0.2s;
+        }
+        .loc-btn.active {
+            border-color: #D1C4E9;
+            background: rgba(209, 196, 233, 0.1);
+        }
+
         .nav-back { color: #D1C4E9; font-weight: 700; font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 2rem; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; }
     </style>
 </head>
@@ -76,27 +87,23 @@
         <button onclick="showPage('home')" class="nav-back">← Zurück</button>
         <h2 class="text-3xl font-black italic mb-6 uppercase text-white">Locations</h2>
         
-        <div class="rounded-3xl overflow-hidden border border-white/10 mb-6 shadow-2xl" style="height: 250px;">
-            <iframe 
-                width="100%" height="100%" frameborder="0" style="border:0"
-                src="https://www.google.com/maps/embed/v1/view?key=YOUR_API_KEY_NOT_NEEDED_FOR_SIMPLE_VIEW&center=49.4521,11.0767&zoom=12&maptype=roadmap" 
-                allowfullscreen>
-            </iframe>
-            <iframe src="https://maps.google.com/maps?q=Nürnberg%20Ostendstraße%20100&t=&z=13&ie=UTF8&iwloc=&output=embed" width="100%" height="100%" frameborder="0" style="border:0" allowfullscreen></iframe>
+        <div class="rounded-3xl overflow-hidden border border-white/10 mb-6 shadow-2xl relative" style="height: 280px;">
+            <iframe id="map-frame" width="100%" height="100%" frameborder="0" style="border:0" 
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d41427.76562018894!2d11.045059695662134!3d49.45203!2m3!1f0!2f0!3f0!3m2!1i1024!2i1024!3f0!3m2!1i101!2i10!4f13.1!3m3!1m2!1s0x479f57aee29729d7%3A0xc34a5d3f94098675!2sNürnberg!5e0!3m2!1sde!2sde!4v1700000000000!5m2!1sde!2sde" 
+                allowfullscreen></iframe>
+            
+            <a id="maps-link" href="#" target="_blank" class="hidden absolute bottom-4 right-4 bg-white text-black px-4 py-2 rounded-full text-[10px] font-bold shadow-xl">In Google Maps öffnen</a>
         </div>
 
-        <div class="space-y-4">
-            <div class="p-5 bg-white/5 rounded-2xl border-l-4 border-[#D1C4E9]">
-                <p class="font-bold text-white uppercase text-sm tracking-widest">Business Tower</p>
-                <p class="text-gray-400 text-xs mt-1">Ostendstraße 100, 90482 Nürnberg</p>
-                <a href="https://www.google.com/maps/search/?api=1&query=Business+Tower+Nürnberg+Ostendstraße+100" target="_blank" class="text-[#D1C4E9] text-[10px] font-bold mt-3 inline-block uppercase tracking-wider">In Maps öffnen →</a>
-            </div>
-            
-            <div class="p-5 bg-white/5 rounded-2xl border-l-4 border-gray-600">
-                <p class="font-bold text-white uppercase text-sm tracking-widest">Katharinenhof</p>
-                <p class="text-gray-400 text-xs mt-1">Katharinengasse 14, 90403 Nürnberg</p>
-                <a href="https://www.google.com/maps/search/?api=1&query=Parkhaus+Katharinenhof+Nürnberg" target="_blank" class="text-[#D1C4E9] text-[10px] font-bold mt-3 inline-block uppercase tracking-wider">In Maps öffnen →</a>
-            </div>
+        <div class="grid grid-cols-2 gap-4">
+            <button onclick="updateMap('tower')" id="btn-tower" class="loc-btn">
+                <p class="text-[10px] font-black text-[#D1C4E9] uppercase tracking-tighter">Office</p>
+                <p class="font-bold text-white text-sm leading-tight mt-1">Business Tower</p>
+            </button>
+            <button onclick="updateMap('restaurant')" id="btn-restaurant" class="loc-btn">
+                <p class="text-[10px] font-black text-[#D1C4E9] uppercase tracking-tighter">Event</p>
+                <p class="font-bold text-white text-sm leading-tight mt-1">Katharinenhof</p>
+            </button>
         </div>
     </div>
 
@@ -113,16 +120,32 @@
         </div>
     </div>
 
-    <div id="nfl" class="page"><button onclick="showPage('home')" class="nav-back">← Zurück</button><h2 class="text-3xl font-black italic uppercase">NFL Stats</h2><p class="text-gray-500 mt-4">Statistiken werden geladen...</p></div>
-    <div id="agenda" class="page"><button onclick="showPage('home')" class="nav-back">← Zurück</button><h2 class="text-3xl font-black italic uppercase">Agenda</h2><p class="text-gray-500 mt-4">Programm folgt in Kürze.</p></div>
+    <div id="nfl" class="page"><button onclick="showPage('home')" class="nav-back">← Zurück</button><h2 class="text-3xl font-black italic uppercase">NFL Stats</h2></div>
+    <div id="agenda" class="page"><button onclick="showPage('home')" class="nav-back">← Zurück</button><h2 class="text-3xl font-black italic uppercase">Agenda</h2></div>
 
     <script>
         function showPage(id) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            const target = document.getElementById(id);
-            if (target) {
-                target.classList.add('active');
-                window.scrollTo(0,0);
+            document.getElementById(id).classList.add('active');
+            window.scrollTo(0,0);
+        }
+
+        function updateMap(type) {
+            const frame = document.getElementById('map-frame');
+            const link = document.getElementById('maps-link');
+            
+            // Buttons stylen
+            document.querySelectorAll('.loc-btn').forEach(b => b.classList.remove('active'));
+            link.classList.remove('hidden');
+
+            if(type === 'tower') {
+                frame.src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2593.565457388147!2d11.1044444!3d49.4522222!2m3!1f0!2f0!3f0!3m2!1i1024!2i1024!3f0!3m2!1i102!2i10!4f13.1!3m3!1m2!1s0x479f57cc6f849e4d%3A0xc62263f398491c12!2sBusiness%20Tower%20Nürnberg!5e0!3m2!1sde!2sde!4v1700000000000!5m2!1sde!2sde";
+                link.href = "https://www.google.com/maps?q=Business+Tower+Nürnberg";
+                document.getElementById('btn-tower').classList.add('active');
+            } else {
+                frame.src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2593.181816738211!2d11.0827778!3d49.4522222!2m3!1f0!2f0!3f0!3m2!1i1024!2i1024!3f0!3m2!1i102!2i10!4f13.1!3m3!1m2!1s0x479f570bd6453915%3A0x6b67702581672323!2sKatharinengasse%2014%2C%2090403%20Nürnberg!5e0!3m2!1sde!2sde!4v1700000000000!5m2!1sde!2sde";
+                link.href = "https://www.google.com/maps?q=Katharinengasse+14,+90403+Nürnberg";
+                document.getElementById('btn-restaurant').classList.add('active');
             }
         }
     </script>
