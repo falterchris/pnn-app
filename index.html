@@ -35,6 +35,9 @@
 
         .category-header { background: rgba(255,255,255,0.05); padding: 16px; border-radius: 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-style: italic; text-transform: uppercase; cursor: pointer; }
         
+        .date-divider { color: var(--brand-rosa); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin: 24px 0 12px 4px; display: flex; align-items: center; }
+        .date-divider::after { content: ""; flex: 1; height: 1px; background: rgba(243, 209, 209, 0.15); margin-left: 15px; }
+
         .is-fav { color: #f43f5e !important; opacity: 1 !important; }
         .hidden { display: none !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -60,7 +63,6 @@
             </div>
             <div id="otp-step" class="w-full max-w-xs mx-auto text-center mt-10 hidden">
                 <h2 class="text-2xl font-bold uppercase italic mb-4">Code prüfen</h2>
-                <p class="text-xs opacity-50 mb-6">Prüfe dein Postfach (6 oder 8 Stellen)</p>
                 <input type="text" id="otp-code" placeholder="Code eingeben" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-center mb-4 outline-none tracking-[0.5em] text-xl text-white">
                 <button onclick="handleVerifyOtp()" class="w-full bg-[#F3D1D1] text-black font-bold p-4 rounded-xl">Einloggen</button>
             </div>
@@ -90,7 +92,7 @@
     <script>
         const SUPABASE_URL = 'https://eljpoxtfxfbgnpteyrsq.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_Tjfcf2J34DrY0sHsdpXgLw_y2_0A_rm';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true } });
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let currentDay = '2026-03-23';
         let openCats = new Set(); 
@@ -142,6 +144,7 @@
 
         function changeDay(day, btn) {
             currentDay = day;
+            openCats.clear(); // RESET: Alle Gruppen beim Tagwechsel zuklappen
             document.querySelectorAll('.day-tab').forEach(t => t.classList.remove('active'));
             btn.classList.add('active');
             renderAgenda();
@@ -214,11 +217,9 @@
             const isFav = btn.classList.contains('is-fav');
             const { data: { user } } = await supabaseClient.auth.getUser();
 
-            // UI Update sofort
             if (isFav) { btn.classList.remove('is-fav'); btn.classList.add('opacity-10'); }
             else { btn.classList.add('is-fav'); btn.classList.remove('opacity-10'); }
 
-            // DB im Hintergrund
             if (isFav) await supabaseClient.from('favorites').delete().eq('user_id', user.id).eq('agenda_id', id);
             else await supabaseClient.from('favorites').insert([{ user_id: user.id, agenda_id: id }]);
 
@@ -226,16 +227,36 @@
         }
 
         async function renderMyPlan() {
+            const container = document.getElementById('view-content');
             const { data: { user } } = await supabaseClient.auth.getUser();
             const { data: f } = await supabaseClient.from('favorites').select('agenda_id').eq('user_id', user.id);
             const { data: items } = await supabaseClient.from('agenda').select('*').in('id', f?.map(x => x.agenda_id) || []).order('event_day').order('start_time');
             
-            document.getElementById('view-content').innerHTML = items?.map(item => `
-                <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center mb-3 border border-white/5">
-                    <div><p class="text-[10px] text-pink-300 font-bold">${item.event_day.slice(8,10)}.${item.event_day.slice(5,7)}. | ${item.start_time.slice(0,5)}</p>
-                    <p class="font-bold text-sm uppercase">${item.title}</p></div>
-                    <button onclick="toggleFav('${item.id}')" class="text-2xl is-fav"><i class="fas fa-star"></i></button>
-                </div>`).join('') || '<p class="opacity-30 text-center py-10">Noch keine Favoriten markiert.</p>';
+            if (!items || items.length === 0) {
+                container.innerHTML = '<p class="opacity-30 text-center py-10">Noch keine Favoriten markiert.</p>';
+                return;
+            }
+
+            // Gruppierung nach Datum für "My Plan"
+            const groups = {};
+            items.forEach(item => {
+                const dateStr = new Date(item.event_day).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+                if (!groups[dateStr]) groups[dateStr] = [];
+                groups[dateStr].push(item);
+            });
+
+            container.innerHTML = Object.keys(groups).map(date => `
+                <div class="date-divider">${date}</div>
+                ${groups[date].map(item => `
+                    <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center mb-3 border border-white/5">
+                        <div>
+                            <p class="text-[10px] text-pink-300 font-bold">${item.start_time.slice(0,5)} ${item.location_name}</p>
+                            <p class="font-bold text-sm uppercase">${item.title}</p>
+                        </div>
+                        <button onclick="toggleFav('${item.id}')" class="text-2xl is-fav"><i class="fas fa-star"></i></button>
+                    </div>
+                `).join('')}
+            `).join('');
         }
 
         async function renderLocations() {
@@ -244,7 +265,7 @@
                 <div onclick="window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(l.address))" class="bg-white/5 p-5 rounded-2xl mb-3 flex justify-between items-center border border-white/5">
                     <div><p class="font-bold italic uppercase text-lg">${l.name}</p><p class="text-xs opacity-40">${l.address}</p></div>
                     <i class="fas fa-directions text-pink-200 opacity-40 text-xl"></i>
-                </div>`).join('') || '<p class="opacity-30">Keine Locations hinterlegt.</p>';
+                </div>`).join('');
         }
 
         function renderContact() {
