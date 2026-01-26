@@ -38,6 +38,9 @@
         .is-fav { color: #f43f5e !important; opacity: 1 !important; }
         .hidden { display: none !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        /* Notification Badge */
+        #noti-badge { position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; background: #f43f5e; border-radius: 50%; border: 2px solid #000; display: none; }
     </style>
 </head>
 <body>
@@ -48,19 +51,22 @@
             <span class="text-[10px] tracking-[0.3em] opacity-40 uppercase block">Event Framework</span>
             <span class="font-black italic text-lg uppercase tracking-tight">SMM 2026</span>
         </div>
-        <button onclick="handleLogout()" id="logout-btn" class="opacity-40 hidden"><i class="fas fa-sign-out-alt text-xl"></i></button>
+        <button onclick="showNotifications()" id="noti-btn" class="relative opacity-80 hidden">
+            <i class="fas fa-bell text-xl"></i>
+            <div id="noti-badge"></div>
+        </button>
     </div>
 
     <div class="main-content px-6">
         <div id="login-screen">
             <div id="email-step" class="w-full max-w-xs mx-auto text-center mt-10">
                 <h2 class="text-2xl font-bold uppercase italic mb-8">Login</h2>
-                <input type="email" id="email" placeholder="E-Mail Adresse" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-center mb-4 outline-none text-white">
+                <input type="email" id="email" placeholder="E-Mail Adresse" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-center mb-4 outline-none text-white font-bold">
                 <button onclick="handleRequestOtp()" class="w-full bg-[#F3D1D1] text-black font-bold p-4 rounded-xl">Code anfordern</button>
             </div>
             <div id="otp-step" class="w-full max-w-xs mx-auto text-center mt-10 hidden">
                 <h2 class="text-2xl font-bold uppercase italic mb-4">Code prüfen</h2>
-                <input type="text" id="otp-code" placeholder="Code eingeben" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-center mb-4 outline-none tracking-[0.5em] text-xl text-white">
+                <input type="text" id="otp-code" placeholder="Code eingeben" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-center mb-4 outline-none tracking-[0.5em] text-xl text-white font-bold">
                 <button onclick="handleVerifyOtp()" class="w-full bg-[#F3D1D1] text-black font-bold p-4 rounded-xl">Einloggen</button>
             </div>
         </div>
@@ -97,13 +103,13 @@
 
         async function checkUser() {
             const { data: { session } } = await supabaseClient.auth.getSession();
-            session ? showApp() : showLogin();
+            if (session) { showApp(); checkNewNotifications(); } else { showLogin(); }
         }
 
         function showApp() {
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('protected-content').classList.remove('hidden');
-            document.getElementById('logout-btn').classList.remove('hidden');
+            document.getElementById('noti-btn').classList.remove('hidden');
         }
 
         function showLogin() {
@@ -132,7 +138,17 @@
             showApp();
         }
 
-        async function handleLogout() { await supabaseClient.auth.signOut(); location.reload(); }
+        async function checkNewNotifications() {
+            const lastRead = localStorage.getItem('last_noti_read') || '1970-01-01T00:00:00Z';
+            const { data } = await supabaseClient.from('notifications').select('created_at').gt('created_at', lastRead).limit(1);
+            if (data && data.length > 0) document.getElementById('noti-badge').style.display = 'block';
+        }
+
+        function showNotifications() {
+            document.getElementById('noti-badge').style.display = 'none';
+            localStorage.setItem('last_noti_read', new Date().toISOString());
+            showView('notifications');
+        }
 
         function showHome() {
             activeView = 'home';
@@ -146,9 +162,7 @@
             openCats.clear(); 
             document.querySelectorAll('.day-tab').forEach(t => t.classList.remove('active'));
             btn.classList.add('active');
-            
-            if (activeView === 'agenda') renderAgenda();
-            else if (activeView === 'my-plan') renderMyPlan();
+            activeView === 'agenda' ? renderAgenda() : renderMyPlan();
         }
 
         function toggleCategory(cat) {
@@ -171,15 +185,13 @@
             document.getElementById('detail-view').classList.remove('hidden');
             document.getElementById('back-btn').classList.remove('opacity-0', 'pointer-events-none');
             document.getElementById('view-title').innerText = view.replace('-', ' ');
-            
-            // Day-Picker bei Agenda UND My Plan anzeigen
-            const showPicker = (view === 'agenda' || view === 'my-plan');
-            document.getElementById('day-picker').classList.toggle('hidden', !showPicker);
+            document.getElementById('day-picker').classList.toggle('hidden', (view !== 'agenda' && view !== 'my-plan'));
 
             if (view === 'agenda') renderAgenda();
             if (view === 'my-plan') renderMyPlan();
             if (view === 'locations') renderLocations();
             if (view === 'contact') renderContact();
+            if (view === 'notifications') renderNotifications();
         }
 
         async function renderAgenda() {
@@ -230,37 +242,37 @@
             if (isFav) await supabaseClient.from('favorites').delete().eq('user_id', user.id).eq('agenda_id', id);
             else await supabaseClient.from('favorites').insert([{ user_id: user.id, agenda_id: id }]);
 
-            if (activeView === 'my-plan') {
-                setTimeout(renderMyPlan, 300);
-            }
+            if (activeView === 'my-plan') setTimeout(renderMyPlan, 300);
         }
 
         async function renderMyPlan() {
             const container = document.getElementById('view-content');
             const { data: { user } } = await supabaseClient.auth.getUser();
             const { data: f } = await supabaseClient.from('favorites').select('agenda_id').eq('user_id', user.id);
+            const { data: items } = await supabaseClient.from('agenda').select('*').in('id', f?.map(x => x.agenda_id) || []).eq('event_day', currentDay).order('start_time');
             
-            // Filtert Favoriten NUR für den aktuell gewählten Tag
-            const { data: items } = await supabaseClient.from('agenda')
-                .select('*')
-                .in('id', f?.map(x => x.agenda_id) || [])
-                .eq('event_day', currentDay)
-                .order('start_time');
-            
-            if (!items || items.length === 0) {
-                container.innerHTML = `<p class="opacity-30 text-center py-10 italic">Keine Favoriten für diesen Tag markiert.</p>`;
-                return;
-            }
-
-            container.innerHTML = items.map(item => `
+            container.innerHTML = items?.length > 0 ? items.map(item => `
                 <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center mb-3 border border-white/5">
-                    <div>
-                        <p class="text-[10px] text-pink-300 font-bold">${item.start_time.slice(0,5)} ${item.location_name}</p>
-                        <p class="font-bold text-sm uppercase">${item.title}</p>
-                    </div>
+                    <div><p class="text-[10px] text-pink-300 font-bold">${item.start_time.slice(0,5)} ${item.location_name}</p>
+                    <p class="font-bold text-sm uppercase">${item.title}</p></div>
                     <button id="fav-${item.id}" onclick="toggleFav('${item.id}')" class="text-2xl is-fav"><i class="fas fa-star"></i></button>
-                </div>
-            `).join('');
+                </div>`).join('') : '<p class="opacity-30 text-center py-10 italic">Keine Favoriten für diesen Tag.</p>';
+        }
+
+        async function renderNotifications() {
+            const container = document.getElementById('view-content');
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            const { data: notis } = await supabaseClient.from('notifications')
+                .select('*')
+                .or(`target_group.eq.ALL,target_user_id.eq.${user.id}`)
+                .order('created_at', { ascending: false });
+
+            container.innerHTML = notis?.map(n => `
+                <div class="bg-white/5 p-6 rounded-3xl mb-4 border-l-4 border-[#F3D1D1]">
+                    <p class="text-[10px] opacity-30 mb-1">${new Date(n.created_at).toLocaleString('de-DE')}</p>
+                    <h3 class="font-black italic uppercase text-lg mb-1">${n.title}</h3>
+                    <p class="text-sm opacity-70">${n.message}</p>
+                </div>`).join('') || '<p class="opacity-30 text-center py-10">Keine Nachrichten.</p>';
         }
 
         async function renderLocations() {
@@ -279,7 +291,7 @@
                         <i class="fab fa-whatsapp text-4xl text-green-400"></i>
                     </div>
                     <h3 class="text-2xl font-bold mb-2 uppercase italic">Event Support</h3>
-                    <p class="text-sm opacity-50 mb-8">Du hast Fragen zum Ablauf oder brauchst Hilfe vor Ort?</p>
+                    <p class="text-sm opacity-50 mb-8">Fragen zum Ablauf oder Hilfe vor Ort?</p>
                     <a href="https://wa.me/491701234567" class="inline-block bg-[#F3D1D1] text-black font-black py-4 px-10 rounded-2xl uppercase tracking-tighter">WhatsApp Chat</a>
                 </div>`;
         }
