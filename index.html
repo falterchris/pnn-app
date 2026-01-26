@@ -101,7 +101,7 @@
             const email = document.getElementById('email').value;
             const { error } = await supabaseClient.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
             if (error) alert(error.message);
-            else document.getElementById('login-container').innerHTML = `<p>Link gesendet! Bitte Mails checken.</p>`;
+            else document.getElementById('login-container').innerHTML = `<p class='p-4 bg-white/5 rounded-xl'>Link gesendet! Bitte Mails checken.</p>`;
         }
 
         async function handleLogout() {
@@ -111,16 +111,15 @@
 
         async function toggleFavorite(agendaId) {
             const { data: { user } } = await supabaseClient.auth.getUser();
-            const { data: existing } = await supabaseClient.from('favorites').select('*').eq('user_id', user.id).eq('agenda_id', agendaId).single();
+            const { data: existing } = await supabaseClient.from('favorites').select('*').eq('user_id', user.id).eq('agenda_id', agendaId).maybeSingle();
 
             if (existing) {
                 await supabaseClient.from('favorites').delete().eq('id', existing.id);
             } else {
                 await supabaseClient.from('favorites').insert([{ user_id: user.id, agenda_id: agendaId }]);
             }
-            // View aktualisieren, um Stern-Farbe zu ändern
             const currentView = document.getElementById('view-title').innerText.toLowerCase();
-            showView(currentView === 'my plan' ? 'my-plan' : 'agenda');
+            showView(currentView === 'MY PLAN' ? 'my-plan' : 'agenda');
         }
 
         async function showView(view) {
@@ -137,39 +136,51 @@
 
             if (view === 'agenda' || view === 'my-plan') {
                 let query = supabaseClient.from('agenda').select('*, favorites(id, user_id)');
+                
                 if (view === 'my-plan') {
-                    // Nur Sessions zeigen, die der User favorisiert hat
                     const { data: favs } = await supabaseClient.from('favorites').select('agenda_id').eq('user_id', user.id);
-                    const favIds = favs.map(f => f.agenda_id);
+                    const favIds = favs ? favs.map(f => f.agenda_id) : [];
                     query = query.in('id', favIds);
                 }
 
                 const { data: agendaData } = await query.order('start_time');
                 
-                content.innerHTML = agendaData?.map(item => {
+                if (!agendaData || agendaData.length === 0) {
+                    content.innerHTML = '<p class="opacity-30 italic">Keine Einträge gefunden.</p>';
+                    return;
+                }
+
+                content.innerHTML = agendaData.map(item => {
                     const isFav = item.favorites?.some(f => f.user_id === user.id);
                     return `
                         <div class="bg-white/5 p-6 rounded-3xl flex justify-between items-center border border-white/5">
                             <div>
-                                <p class="text-[10px] font-bold text-pink-300 uppercase">${item.start_time.slice(0,5)}</p>
-                                <p class="text-xl font-bold uppercase italic">${item.title}</p>
+                                <p class="text-[10px] font-bold text-pink-300 uppercase">${item.start_time.slice(0,5)} Uhr</p>
+                                <p class="text-xl font-bold uppercase italic tracking-tighter">${item.title}</p>
                             </div>
                             <button onclick="toggleFavorite('${item.id}')" class="text-2xl ${isFav ? 'is-fav' : 'opacity-10'}">
                                 <i class="fas fa-star"></i>
                             </button>
                         </div>
                     `;
-                }).join('') || 'Keine Einträge.';
+                }).join('');
             }
 
             if (view === 'locations') {
                 const { data: locs } = await supabaseClient.from('locations').select('*');
-                content.innerHTML = locs?.map(l => `
-                    <div onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l.address)}')" class="bg-white/5 p-6 rounded-3xl border border-white/5">
-                        <p class="text-xl font-bold uppercase italic">${l.name}</p>
-                        <p class="text-xs opacity-40">${l.address}</p>
+                if (!locs || locs.length === 0) {
+                    content.innerHTML = '<p class="opacity-30 italic">Keine Locations hinterlegt.</p>';
+                    return;
+                }
+                content.innerHTML = locs.map(l => `
+                    <div onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l.address)}')" class="bg-white/5 p-6 rounded-3xl border border-white/5 flex justify-between items-center">
+                        <div>
+                            <p class="text-xl font-bold uppercase italic">${l.name}</p>
+                            <p class="text-xs opacity-40">${l.address}</p>
+                        </div>
+                        <i class="fas fa-directions text-pink-200 opacity-50"></i>
                     </div>
-                `).join('') || 'Keine Locations vorhanden.';
+                `).join('');
             }
         }
 
