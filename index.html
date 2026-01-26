@@ -10,18 +10,36 @@
     <style>
         :root { --brand-rosa: #F3D1D1; }
         body { background: #000; color: #f3f4f6; font-family: 'Inter', sans-serif; margin: 0; -webkit-tap-highlight-color: transparent; }
-        .sticky-header { position: fixed; top: 0; left: 0; right: 0; height: calc(env(safe-area-inset-top) + 65px); background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(15px); z-index: 1000; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 24px 15px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        
+        .sticky-header { 
+            position: fixed; top: 0; left: 0; right: 0; 
+            height: calc(env(safe-area-inset-top) + 65px); 
+            background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(15px); 
+            z-index: 1000; display: flex; align-items: flex-end; justify-content: space-between; 
+            padding: 0 24px 15px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); 
+        }
+
         .main-content { padding-top: calc(env(safe-area-inset-top) + 85px); padding-bottom: 40px; }
-        .grid-tile { background-color: var(--brand-rosa); color: #4A3B3B; aspect-ratio: 1/1; border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; text-transform: uppercase; font-size: 0.85rem; transition: transform 0.1s; }
+        
+        .grid-tile { 
+            background-color: var(--brand-rosa); color: #4A3B3B; 
+            aspect-ratio: 1/1; border-radius: 22px; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            font-weight: 800; text-transform: uppercase; font-size: 0.85rem; 
+            transition: transform 0.1s;
+        }
         .grid-tile:active { transform: scale(0.95); }
+
         .day-tab { padding: 8px 16px; border-radius: 12px; font-size: 12px; font-weight: bold; opacity: 0.4; transition: 0.3s; white-space: nowrap; border: 1px solid rgba(255,255,255,0.1); }
         .day-tab.active { opacity: 1; background: var(--brand-rosa); color: #000; border-color: var(--brand-rosa); }
+
         .category-header { background: rgba(255,255,255,0.05); padding: 16px; border-radius: 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-style: italic; text-transform: uppercase; cursor: pointer; }
+        
         .is-fav { color: #f43f5e !important; opacity: 1 !important; }
         .hidden { display: none !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        #noti-badge { position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; background: #f43f5e; border-radius: 50%; border: 2px solid #000; display: none; }
-        input, select, textarea { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; color: white; width: 100%; outline: none; }
+
+        input, select, textarea { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; color: white; width: 100%; outline: none; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -34,7 +52,7 @@
         </div>
         <button onclick="showNotifications()" id="noti-btn" class="relative opacity-80 hidden">
             <i class="fas fa-bell text-xl"></i>
-            <div id="noti-badge"></div>
+            <div id="noti-badge" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full hidden border-2 border-black"></div>
         </button>
     </div>
 
@@ -42,12 +60,12 @@
         <div id="login-screen">
             <div id="email-step" class="w-full max-w-xs mx-auto text-center mt-10">
                 <h2 class="text-2xl font-bold uppercase italic mb-8">Login</h2>
-                <input type="email" id="email-login" placeholder="E-Mail Adresse" class="font-bold text-center">
+                <input type="email" id="email-login" placeholder="E-Mail" class="text-center font-bold">
                 <button onclick="handleRequestOtp()" class="w-full bg-[#F3D1D1] text-black font-bold p-4 rounded-xl mt-4">Code anfordern</button>
             </div>
             <div id="otp-step" class="w-full max-w-xs mx-auto text-center mt-10 hidden">
                 <h2 class="text-2xl font-bold uppercase italic mb-4">Code prüfen</h2>
-                <input type="text" id="otp-code" placeholder="Code eingeben" class="tracking-[0.5em] text-xl text-center font-bold">
+                <input type="text" id="otp-code" placeholder="Code" class="tracking-[0.5em] text-xl text-center font-bold">
                 <button onclick="handleVerifyOtp()" class="w-full bg-[#F3D1D1] text-black font-bold p-4 rounded-xl mt-4">Einloggen</button>
             </div>
         </div>
@@ -79,22 +97,28 @@
         const SUPABASE_KEY = 'sb_publishable_Tjfcf2J34DrY0sHsdpXgLw_y2_0A_rm';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // HIER ADMIN EMAILS DEFINIEREN
-        const ADMIN_EMAILS = ['text.falter@gmail.com', 'admin@event.com'];
+        // HIER DEINE ADMIN EMAIL EINTRAGEN
+        const ADMIN_EMAILS = ['admin@deinedomain.de'];
 
         let currentDay = '2026-03-23';
         let openCats = new Set(); 
         let activeView = 'home';
 
+        // INITIALISIERUNG
         async function checkUser() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
                 showApp();
-                if (ADMIN_EMAILS.includes(session.user.email)) {
-                    document.getElementById('admin-tile').classList.remove('hidden');
-                }
+                if (ADMIN_EMAILS.includes(session.user.email)) document.getElementById('admin-tile').classList.remove('hidden');
                 checkNewNotifications();
+                registerServiceWorker();
             } else { showLogin(); }
+        }
+
+        async function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                try { await navigator.serviceWorker.register('/sw.js'); } catch (e) { console.log('SW failed', e); }
+            }
         }
 
         function showApp() {
@@ -108,35 +132,22 @@
             document.getElementById('protected-content').classList.add('hidden');
         }
 
+        // LOGIN LOGIK
         async function handleRequestOtp() {
             const email = document.getElementById('email-login').value;
             const { error } = await supabaseClient.auth.signInWithOtp({ email });
             if (error) alert(error.message);
-            else {
-                document.getElementById('email-step').classList.add('hidden');
-                document.getElementById('otp-step').classList.remove('hidden');
-            }
+            else { document.getElementById('email-step').classList.add('hidden'); document.getElementById('otp-step').classList.remove('hidden'); }
         }
 
         async function handleVerifyOtp() {
             const email = document.getElementById('email-login').value;
             const token = document.getElementById('otp-code').value.trim();
             const { error } = await supabaseClient.auth.verifyOtp({ email, token, type: 'magiclink' });
-            if (error) alert("Fehler beim Login."); else location.reload();
+            if (error) alert("Code falsch."); else location.reload();
         }
 
-        async function checkNewNotifications() {
-            const lastRead = localStorage.getItem('last_noti_read') || '1970-01-01T00:00:00Z';
-            const { data } = await supabaseClient.from('notifications').select('created_at').gt('created_at', lastRead).limit(1);
-            if (data && data.length > 0) document.getElementById('noti-badge').style.display = 'block';
-        }
-
-        function showNotifications() {
-            document.getElementById('noti-badge').style.display = 'none';
-            localStorage.setItem('last_noti_read', new Date().toISOString());
-            showView('notifications');
-        }
-
+        // NAVIGATION
         function showHome() {
             activeView = 'home';
             document.getElementById('home-view').classList.remove('hidden');
@@ -182,34 +193,28 @@
             if (view === 'admin') renderAdmin();
         }
 
+        // RENDERING
         async function renderAgenda() {
             const container = document.getElementById('view-content');
             const { data: { user } } = await supabaseClient.auth.getUser();
-            const { data: items } = await supabaseClient.from('agenda').select('*, favorites(user_id)')
-                .eq('event_day', currentDay).order('start_time');
-
+            const { data: items } = await supabaseClient.from('agenda').select('*, favorites(user_id)').eq('event_day', currentDay).order('start_time');
             const cats = ['BRAND', 'COMMERCIAL', 'FASHION', 'RUNNING', 'FOOTBALL', 'OUTDOOR'];
+            
             container.innerHTML = cats.map(cat => {
                 const isOpen = openCats.has(cat);
                 const catItems = items?.filter(i => i.category === cat) || [];
                 return `
                 <div class="mb-4">
                     <div class="category-header" onclick="toggleCategory('${cat}')">
-                        <span>${cat}</span>
-                        <i id="cat-icon-${cat}" class="fas fa-chevron-${isOpen ? 'up' : 'down'} opacity-30 text-xs"></i>
+                        <span>${cat}</span><i id="cat-icon-${cat}" class="fas fa-chevron-${isOpen ? 'up' : 'down'} opacity-30 text-xs"></i>
                     </div>
                     <div id="cat-content-${cat}" class="space-y-2 ${isOpen ? '' : 'hidden'}">
                         ${catItems.map(item => {
                             const isFav = item.favorites?.some(f => f.user_id === user.id);
                             return `
                             <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center border border-white/5">
-                                <div>
-                                    <p class="text-[10px] text-pink-300 font-bold">${item.start_time.slice(0,5)} ${item.location_name}</p>
-                                    <p class="font-bold text-sm uppercase">${item.title}</p>
-                                </div>
-                                <button id="fav-${item.id}" onclick="toggleFav('${item.id}')" class="text-2xl ${isFav ? 'is-fav' : 'opacity-10'}">
-                                    <i class="fas fa-star"></i>
-                                </button>
+                                <div><p class="text-[10px] text-pink-300 font-bold">${item.start_time.slice(0,5)} ${item.location_name}</p><p class="font-bold text-sm uppercase">${item.title}</p></div>
+                                <button id="fav-${item.id}" onclick="toggleFav('${item.id}')" class="text-2xl ${isFav ? 'is-fav' : 'opacity-10'}"><i class="fas fa-star"></i></button>
                             </div>`;
                         }).join('')}
                     </div>
@@ -217,30 +222,40 @@
             }).join('');
         }
 
-        async function toggleFav(id) {
-            const btns = document.querySelectorAll(`[id="fav-${id}"]`);
-            const isFav = btns[0] ? btns[0].classList.contains('is-fav') : false;
-            const { data: { user } } = await supabaseClient.auth.getUser();
-            btns.forEach(btn => {
-                if (isFav) { btn.classList.remove('is-fav'); btn.classList.add('opacity-10'); }
-                else { btn.classList.add('is-fav'); btn.classList.remove('opacity-10'); }
-            });
-            if (isFav) await supabaseClient.from('favorites').delete().eq('user_id', user.id).eq('agenda_id', id);
-            else await supabaseClient.from('favorites').insert([{ user_id: user.id, agenda_id: id }]);
-            if (activeView === 'my-plan') setTimeout(renderMyPlan, 300);
-        }
-
         async function renderMyPlan() {
             const container = document.getElementById('view-content');
             const { data: { user } } = await supabaseClient.auth.getUser();
             const { data: f } = await supabaseClient.from('favorites').select('agenda_id').eq('user_id', user.id);
             const { data: items } = await supabaseClient.from('agenda').select('*').in('id', f?.map(x => x.agenda_id) || []).eq('event_day', currentDay).order('start_time');
+            
             container.innerHTML = items?.length > 0 ? items.map(item => `
                 <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center mb-3 border border-white/5">
-                    <div><p class="text-[10px] text-pink-300 font-bold">${item.start_time.slice(0,5)} ${item.location_name}</p>
-                    <p class="font-bold text-sm uppercase">${item.title}</p></div>
+                    <div><p class="text-[10px] text-pink-300 font-bold">${item.start_time.slice(0,5)} ${item.location_name}</p><p class="font-bold text-sm uppercase">${item.title}</p></div>
                     <button id="fav-${item.id}" onclick="toggleFav('${item.id}')" class="text-2xl is-fav"><i class="fas fa-star"></i></button>
                 </div>`).join('') : '<p class="opacity-30 text-center py-10 italic">Keine Favoriten für diesen Tag.</p>';
+        }
+
+        async function toggleFav(id) {
+            const btns = document.querySelectorAll(`[id="fav-${id}"]`);
+            const isFav = btns[0] ? btns[0].classList.contains('is-fav') : false;
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            btns.forEach(btn => { if (isFav) { btn.classList.remove('is-fav'); btn.classList.add('opacity-10'); } else { btn.classList.add('is-fav'); btn.classList.remove('opacity-10'); }});
+            if (isFav) await supabaseClient.from('favorites').delete().eq('user_id', user.id).eq('agenda_id', id);
+            else await supabaseClient.from('favorites').insert([{ user_id: user.id, agenda_id: id }]);
+            if (activeView === 'my-plan') setTimeout(renderMyPlan, 300);
+        }
+
+        // NOTIFICATIONS & ADMIN
+        async function checkNewNotifications() {
+            const lastRead = localStorage.getItem('last_noti_read') || '1970-01-01T00:00:00Z';
+            const { data } = await supabaseClient.from('notifications').select('created_at').gt('created_at', lastRead).limit(1);
+            if (data && data.length > 0) document.getElementById('noti-badge').classList.remove('hidden');
+        }
+
+        function showNotifications() {
+            document.getElementById('noti-badge').classList.add('hidden');
+            localStorage.setItem('last_noti_read', new Date().toISOString());
+            showView('notifications');
         }
 
         async function renderNotifications() {
@@ -248,51 +263,49 @@
             const { data: { user } } = await supabaseClient.auth.getUser();
             const { data: profile } = await supabaseClient.from('profiles').select('user_group').eq('id', user.id).single();
             const group = profile?.user_group || 'ALL';
-
-            const { data: notis } = await supabaseClient.from('notifications')
-                .select('*')
-                .or(`target_group.eq.ALL,target_group.eq.${group},target_user_id.eq.${user.id}`)
-                .order('created_at', { ascending: false });
+            const { data: notis } = await supabaseClient.from('notifications').select('*').or(`target_group.eq.ALL,target_group.eq.${group},target_user_id.eq.${user.id}`).order('created_at', { ascending: false });
 
             container.innerHTML = notis?.map(n => `
                 <div class="bg-white/5 p-6 rounded-3xl mb-4 border-l-4 border-[#F3D1D1]">
                     <p class="text-[10px] opacity-30 mb-1">${new Date(n.created_at).toLocaleString('de-DE')}</p>
-                    <h3 class="font-black italic uppercase text-lg mb-1">${n.title}</h3>
-                    <p class="text-sm opacity-70">${n.message}</p>
+                    <h3 class="font-black italic uppercase text-lg mb-1">${n.title}</h3><p class="text-sm opacity-70">${n.message}</p>
                 </div>`).join('') || '<p class="opacity-30 text-center py-10">Keine Nachrichten.</p>';
         }
 
-        function renderAdmin() {
-            document.getElementById('view-content').innerHTML = `
-                <div class="space-y-6">
-                    <div class="bg-white/5 p-6 rounded-3xl border border-white/10">
-                        <h3 class="font-bold mb-4 uppercase italic">Neue Notification senden</h3>
-                        <input id="admin-title" placeholder="Titel" class="mb-3">
-                        <textarea id="admin-msg" placeholder="Nachricht..." rows="3" class="mb-3"></textarea>
-                        <select id="admin-group" class="mb-4">
-                            <option value="ALL">An Alle (ALL)</option>
-                            <option value="CREW">Nur CREW</option>
-                            <option value="VIP">Nur VIP</option>
-                            <option value="FASHION">Gruppe FASHION</option>
+        async function renderAdmin() {
+            const container = document.getElementById('view-content');
+            const { data: users } = await supabaseClient.from('profiles').select('*').order('email');
+            
+            container.innerHTML = `
+                <div class="bg-white/5 p-6 rounded-3xl mb-8 border border-white/10">
+                    <h3 class="font-bold mb-4 uppercase italic">Broadcast senden</h3>
+                    <input id="admin-title" placeholder="Titel"><textarea id="admin-msg" placeholder="Nachricht..." rows="3"></textarea>
+                    <select id="admin-group"><option value="ALL">An Alle</option><option value="CREW">CREW</option><option value="VIP">VIP</option></select>
+                    <button onclick="sendAdminNoti()" class="w-full bg-[#f43f5e] text-white font-bold p-4 rounded-xl">SENDEN</button>
+                </div>
+                <h3 class="font-bold mb-4 uppercase italic">User Management</h3>
+                <div class="space-y-3">${users.map(u => `
+                    <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center">
+                        <span class="text-xs truncate mr-2">${u.email}</span>
+                        <select onchange="updateUserGroup('${u.id}', this.value)" class="!w-24 !m-0 !py-1 text-[10px]">
+                            <option value="ALL" ${u.user_group === 'ALL' ? 'selected' : ''}>ALL</option>
+                            <option value="CREW" ${u.user_group === 'CREW' ? 'selected' : ''}>CREW</option>
+                            <option value="VIP" ${u.user_group === 'VIP' ? 'selected' : ''}>VIP</option>
                         </select>
-                        <button onclick="sendAdminNoti()" class="w-full bg-[#f43f5e] text-white font-bold p-4 rounded-xl">SENDEN</button>
-                    </div>
-                </div>`;
+                    </div>`).join('')}</div>`;
         }
 
         async function sendAdminNoti() {
             const title = document.getElementById('admin-title').value;
             const message = document.getElementById('admin-msg').value;
             const target_group = document.getElementById('admin-group').value;
-
-            if(!title || !message) return alert("Bitte alles ausfüllen!");
-
             const { error } = await supabaseClient.from('notifications').insert([{ title, message, target_group }]);
-            if (error) alert(error.message);
-            else {
-                alert("Erfolgreich gesendet!");
-                showHome();
-            }
+            if (error) alert(error.message); else { alert("Gesendet!"); showHome(); }
+        }
+
+        async function updateUserGroup(userId, newGroup) {
+            await supabaseClient.from('profiles').update({ user_group: newGroup }).eq('id', userId);
+            alert("Gruppe für User aktualisiert.");
         }
 
         async function renderLocations() {
@@ -305,19 +318,10 @@
         }
 
         function renderContact() {
-            document.getElementById('view-content').innerHTML = `
-                <div class="bg-white/5 p-10 rounded-3xl text-center border border-white/5">
-                    <div class="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <i class="fab fa-whatsapp text-4xl text-green-400"></i>
-                    </div>
-                    <h3 class="text-2xl font-bold mb-2 uppercase italic">Event Support</h3>
-                    <p class="text-sm opacity-50 mb-8">Fragen zum Ablauf oder Hilfe vor Ort?</p>
-                    <a href="https://wa.me/491701234567" class="inline-block bg-[#F3D1D1] text-black font-black py-4 px-10 rounded-2xl uppercase tracking-tighter">WhatsApp Chat</a>
-                </div>`;
+            document.getElementById('view-content').innerHTML = `<div class="bg-white/5 p-10 rounded-3xl text-center border border-white/5"><div class="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6"><i class="fab fa-whatsapp text-4xl text-green-400"></i></div><h3 class="text-2xl font-bold mb-2 uppercase italic">Support</h3><a href="https://wa.me/491701234567" class="inline-block bg-[#F3D1D1] text-black font-black py-4 px-10 rounded-2xl uppercase">WhatsApp Chat</a></div>`;
         }
 
         checkUser();
     </script>
 </body>
 </html>
-
