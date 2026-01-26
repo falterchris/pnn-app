@@ -28,12 +28,11 @@
             aspect-ratio: 1/1; border-radius: 22px;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             font-weight: 800; text-transform: uppercase; font-size: 0.9rem;
-            transition: transform 0.1s ease;
         }
         .grid-tile:active { transform: scale(0.96); }
 
         #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; background: #000; }
-        input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 18px; border-radius: 16px; color: white; width: 100%; margin-bottom: 12px; font-size: 16px; outline: none; }
+        input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 18px; border-radius: 16px; color: white; width: 100%; margin-bottom: 12px; font-size: 16px; outline: none; text-align: center; }
         .btn-primary { background: var(--brand-rosa); color: #000; padding: 18px; border-radius: 16px; width: 100%; font-weight: bold; }
         
         #protected-content { display: none; }
@@ -54,10 +53,18 @@
 
     <div class="main-content px-6">
         <div id="login-screen">
-            <div id="login-container" class="w-full max-w-xs text-center">
+            <div id="email-step" class="w-full max-w-xs text-center">
                 <h2 class="text-2xl font-bold uppercase italic mb-8">Login</h2>
-                <input type="email" id="email" placeholder="Deine E-Mail Adresse">
-                <button onclick="handleLogin()" class="btn-primary">Link anfordern</button>
+                <input type="email" id="email" placeholder="E-Mail Adresse">
+                <button onclick="handleRequestOtp()" class="btn-primary">Code anfordern</button>
+            </div>
+            
+            <div id="otp-step" class="w-full max-w-xs text-center hidden">
+                <h2 class="text-2xl font-bold uppercase italic mb-4">Code prüfen</h2>
+                <p class="text-xs opacity-50 mb-6 text-balance">Gib den 6-stelligen Code aus deiner E-Mail ein.</p>
+                <input type="text" id="otp-code" placeholder="123456" inputmode="numeric" maxlength="6">
+                <button onclick="handleVerifyOtp()" class="btn-primary">Einloggen</button>
+                <button onclick="location.reload()" class="mt-6 text-xs opacity-30 underline italic">Abbrechen</button>
             </div>
         </div>
 
@@ -97,11 +104,29 @@
             document.getElementById('protected-content').style.display = 'none';
         }
 
-        async function handleLogin() {
+        async function handleRequestOtp() {
             const email = document.getElementById('email').value;
-            const { error } = await supabaseClient.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
+            if (!email) return alert("E-Mail fehlt!");
+            const { error } = await supabaseClient.auth.signInWithOtp({ email });
             if (error) alert(error.message);
-            else document.getElementById('login-container').innerHTML = `<p class='p-4 bg-white/5 rounded-xl'>Link gesendet! Bitte Mails checken.</p>`;
+            else {
+                document.getElementById('email-step').classList.add('hidden');
+                document.getElementById('otp-step').classList.remove('hidden');
+            }
+        }
+
+        async function handleVerifyOtp() {
+            const email = document.getElementById('email').value;
+            const token = document.getElementById('otp-code').value;
+            // Versuch 1: Magiclink Typ (Standard für OTP)
+            let { error } = await supabaseClient.auth.verifyOtp({ email, token, type: 'magiclink' });
+            
+            // Versuch 2: Signup Typ (Falls neuer User)
+            if (error) {
+                const { error: error2 } = await supabaseClient.auth.verifyOtp({ email, token, type: 'signup' });
+                if (error2) return alert("Code ungültig oder abgelaufen.");
+            }
+            showApp();
         }
 
         async function handleLogout() {
@@ -112,75 +137,59 @@
         async function toggleFavorite(agendaId) {
             const { data: { user } } = await supabaseClient.auth.getUser();
             const { data: existing } = await supabaseClient.from('favorites').select('*').eq('user_id', user.id).eq('agenda_id', agendaId).maybeSingle();
-
-            if (existing) {
-                await supabaseClient.from('favorites').delete().eq('id', existing.id);
-            } else {
-                await supabaseClient.from('favorites').insert([{ user_id: user.id, agenda_id: agendaId }]);
-            }
-            const currentView = document.getElementById('view-title').innerText.toLowerCase();
-            showView(currentView === 'MY PLAN' ? 'my-plan' : 'agenda');
+            if (existing) await supabaseClient.from('favorites').delete().eq('id', existing.id);
+            else await supabaseClient.from('favorites').insert([{ user_id: user.id, agenda_id: agendaId }]);
+            const currentTitle = document.getElementById('view-title').innerText;
+            showView(currentTitle === 'MY PLAN' ? 'my-plan' : 'agenda');
         }
 
         async function showView(view) {
             document.getElementById('home-view').classList.add('hidden');
             document.getElementById('detail-view').classList.remove('hidden');
             document.getElementById('back-btn').classList.remove('pointer-events-none', 'opacity-0');
-            
             const title = document.getElementById('view-title');
             const content = document.getElementById('view-content');
             title.innerText = view.replace('-', ' ').toUpperCase();
-            content.innerHTML = '<p class="opacity-20 animate-pulse">Lade...</p>';
-
             const { data: { user } } = await supabaseClient.auth.getUser();
 
             if (view === 'agenda' || view === 'my-plan') {
-                let query = supabaseClient.from('agenda').select('*, favorites(id, user_id)');
-                
+                let query = supabaseClient.from('agenda').select('*, favorites(user_id)');
                 if (view === 'my-plan') {
                     const { data: favs } = await supabaseClient.from('favorites').select('agenda_id').eq('user_id', user.id);
-                    const favIds = favs ? favs.map(f => f.agenda_id) : [];
-                    query = query.in('id', favIds);
+                    query = query.in('id', favs ? favs.map(f => f.agenda_id) : []);
                 }
-
                 const { data: agendaData } = await query.order('start_time');
-                
-                if (!agendaData || agendaData.length === 0) {
-                    content.innerHTML = '<p class="opacity-30 italic">Keine Einträge gefunden.</p>';
-                    return;
-                }
-
-                content.innerHTML = agendaData.map(item => {
-                    const isFav = item.favorites?.some(f => f.user_id === user.id);
-                    return `
-                        <div class="bg-white/5 p-6 rounded-3xl flex justify-between items-center border border-white/5">
-                            <div>
-                                <p class="text-[10px] font-bold text-pink-300 uppercase">${item.start_time.slice(0,5)} Uhr</p>
-                                <p class="text-xl font-bold uppercase italic tracking-tighter">${item.title}</p>
-                            </div>
-                            <button onclick="toggleFavorite('${item.id}')" class="text-2xl ${isFav ? 'is-fav' : 'opacity-10'}">
-                                <i class="fas fa-star"></i>
-                            </button>
+                content.innerHTML = agendaData?.map(item => `
+                    <div class="bg-white/5 p-6 rounded-3xl flex justify-between items-center border border-white/5">
+                        <div>
+                            <p class="text-[10px] font-bold text-pink-300 uppercase">${item.start_time.slice(0,5)}</p>
+                            <p class="text-xl font-bold uppercase italic tracking-tighter">${item.title}</p>
                         </div>
-                    `;
-                }).join('');
+                        <button onclick="toggleFavorite('${item.id}')" class="text-2xl ${item.favorites?.some(f => f.user_id === user.id) ? 'is-fav' : 'opacity-10'}">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </div>
+                `).join('') || 'Keine Einträge.';
             }
 
             if (view === 'locations') {
                 const { data: locs } = await supabaseClient.from('locations').select('*');
-                if (!locs || locs.length === 0) {
-                    content.innerHTML = '<p class="opacity-30 italic">Keine Locations hinterlegt.</p>';
-                    return;
-                }
-                content.innerHTML = locs.map(l => `
+                content.innerHTML = locs?.map(l => `
                     <div onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l.address)}')" class="bg-white/5 p-6 rounded-3xl border border-white/5 flex justify-between items-center">
-                        <div>
-                            <p class="text-xl font-bold uppercase italic">${l.name}</p>
-                            <p class="text-xs opacity-40">${l.address}</p>
-                        </div>
+                        <div><p class="text-xl font-bold uppercase italic">${l.name}</p><p class="text-xs opacity-40">${l.address}</p></div>
                         <i class="fas fa-directions text-pink-200 opacity-50"></i>
                     </div>
-                `).join('');
+                `).join('') || 'Keine Locations.';
+            }
+            
+            if (view === 'contact') {
+                content.innerHTML = `
+                    <div class="bg-white/5 p-8 rounded-3xl border border-white/5 text-center">
+                        <i class="fab fa-whatsapp text-5xl mb-4 text-green-400"></i>
+                        <h3 class="text-xl font-bold mb-2">Support Team</h3>
+                        <p class="text-sm opacity-50 mb-6">Hast du Fragen vor Ort in Budapest?</p>
+                        <a href="https://wa.me/491701234567" class="btn-primary inline-block">WhatsApp Chat</a>
+                    </div>`;
             }
         }
 
@@ -190,7 +199,6 @@
             document.getElementById('back-btn').classList.add('pointer-events-none', 'opacity-0');
         }
 
-        supabaseClient.auth.onAuthStateChange((event) => { if (event === 'SIGNED_IN') showApp(); });
         checkUser();
     </script>
 </body>
