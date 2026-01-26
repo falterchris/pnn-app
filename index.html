@@ -3,47 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Event Master Framework</title>
-    
+    <title>Event App</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <style>
-        :root { --brand-rosa: #F3D1D1; --bg-dark: #121212; }
-        body { background: #000; color: #f3f4f6; font-family: 'Inter', sans-serif; margin: 0; overflow-x: hidden; }
-        
-        .sticky-header {
-            position: fixed; top: 0; left: 0; right: 0;
-            height: calc(env(safe-area-inset-top) + 65px);
-            background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(15px);
-            z-index: 1000; display: flex; align-items: flex-end; justify-content: space-between;
-            padding: 0 24px 15px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-
+        :root { --brand-rosa: #F3D1D1; }
+        body { background: #000; color: #f3f4f6; font-family: 'Inter', sans-serif; margin: 0; }
+        .sticky-header { position: fixed; top: 0; left: 0; right: 0; height: calc(env(safe-area-inset-top) + 65px); background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(15px); z-index: 1000; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 24px 15px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .main-content { padding-top: calc(env(safe-area-inset-top) + 85px); padding-bottom: 40px; }
-        
-        .grid-tile {
-            background-color: var(--brand-rosa); color: #4A3B3B;
-            aspect-ratio: 1/1; border-radius: 22px;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-weight: 800; text-transform: uppercase; font-size: 0.9rem;
-        }
-        .grid-tile:active { transform: scale(0.96); }
-
-        #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; background: #000; }
-        input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 18px; border-radius: 16px; color: white; width: 100%; margin-bottom: 12px; font-size: 16px; outline: none; text-align: center; }
+        .grid-tile { background-color: var(--brand-rosa); color: #4A3B3B; aspect-ratio: 1/1; border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; text-transform: uppercase; font-size: 0.9rem; }
+        #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; }
+        input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 18px; border-radius: 16px; color: white; width: 100%; margin-bottom: 12px; font-size: 18px; text-align: center; outline: none; }
         .btn-primary { background: var(--brand-rosa); color: #000; padding: 18px; border-radius: 16px; width: 100%; font-weight: bold; }
-        
-        #protected-content { display: none; }
         .hidden { display: none !important; }
-        .is-fav { color: #f43f5e !important; opacity: 1 !important; }
+        .is-fav { color: #f43f5e !important; }
     </style>
 </head>
 <body>
 
     <div class="sticky-header">
-        <button id="back-btn" onclick="showHome()" class="opacity-0 pointer-events-none transition-opacity"><i class="fas fa-chevron-left text-2xl"></i></button>
+        <button id="back-btn" onclick="showHome()" class="opacity-0 pointer-events-none"><i class="fas fa-chevron-left text-2xl"></i></button>
         <div class="text-center">
             <span class="text-[10px] tracking-[0.3em] opacity-40 uppercase block">Event Framework</span>
             <span class="font-black italic text-lg uppercase tracking-tight">SMM 2026</span>
@@ -55,27 +35,24 @@
         <div id="login-screen">
             <div id="email-step" class="w-full max-w-xs text-center">
                 <h2 class="text-2xl font-bold uppercase italic mb-8">Login</h2>
-                <input type="email" id="email" placeholder="E-Mail Adresse">
+                <input type="email" id="email" placeholder="Deine E-Mail Adresse">
                 <button onclick="handleRequestOtp()" class="btn-primary">Code anfordern</button>
             </div>
-            
             <div id="otp-step" class="w-full max-w-xs text-center hidden">
-                <h2 class="text-2xl font-bold uppercase italic mb-4">Code prüfen</h2>
-                <p class="text-xs opacity-50 mb-6 text-balance">Gib den 6-stelligen Code aus deiner E-Mail ein.</p>
-                <input type="text" id="otp-code" placeholder="123456" inputmode="numeric" maxlength="6">
+                <h2 class="text-2xl font-bold uppercase italic mb-4">Code eingeben</h2>
+                <input type="text" id="otp-code" placeholder="Code aus der Mail">
                 <button onclick="handleVerifyOtp()" class="btn-primary">Einloggen</button>
-                <button onclick="location.reload()" class="mt-6 text-xs opacity-30 underline italic">Abbrechen</button>
+                <button onclick="location.reload()" class="mt-6 text-xs opacity-30 underline">Zurück</button>
             </div>
         </div>
 
-        <div id="protected-content">
+        <div id="protected-content" class="hidden">
             <div id="home-view" class="grid grid-cols-2 gap-5">
                 <button onclick="showView('agenda')" class="grid-tile"><i class="fas fa-calendar-day mb-2 text-3xl"></i>Agenda</button>
                 <button onclick="showView('my-plan')" class="grid-tile"><i class="fas fa-star mb-2 text-3xl"></i>My Plan</button>
                 <button onclick="showView('locations')" class="grid-tile"><i class="fas fa-map-marked-alt mb-2 text-3xl"></i>Locations</button>
                 <button onclick="showView('contact')" class="grid-tile"><i class="fas fa-comment mb-2 text-3xl"></i>Contact</button>
             </div>
-
             <div id="detail-view" class="hidden">
                 <h2 id="view-title" class="text-4xl font-black italic uppercase mb-8 leading-tight"></h2>
                 <div id="view-content" class="space-y-4"></div>
@@ -95,18 +72,17 @@
 
         function showApp() {
             document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('protected-content').style.display = 'block';
+            document.getElementById('protected-content').classList.remove('hidden');
             document.getElementById('logout-btn').classList.remove('hidden');
         }
 
         function showLogin() {
             document.getElementById('login-screen').classList.remove('hidden');
-            document.getElementById('protected-content').style.display = 'none';
+            document.getElementById('protected-content').classList.add('hidden');
         }
 
         async function handleRequestOtp() {
             const email = document.getElementById('email').value;
-            if (!email) return alert("E-Mail fehlt!");
             const { error } = await supabaseClient.auth.signInWithOtp({ email });
             if (error) alert(error.message);
             else {
@@ -117,14 +93,13 @@
 
         async function handleVerifyOtp() {
             const email = document.getElementById('email').value;
-            const token = document.getElementById('otp-code').value;
-            // Versuch 1: Magiclink Typ (Standard für OTP)
-            let { error } = await supabaseClient.auth.verifyOtp({ email, token, type: 'magiclink' });
+            const token = document.getElementById('otp-code').value.trim();
             
-            // Versuch 2: Signup Typ (Falls neuer User)
+            // Probiert beide gängigen Auth-Typen (Magiclink/Signup)
+            let { error } = await supabaseClient.auth.verifyOtp({ email, token, type: 'magiclink' });
             if (error) {
-                const { error: error2 } = await supabaseClient.auth.verifyOtp({ email, token, type: 'signup' });
-                if (error2) return alert("Code ungültig oder abgelaufen.");
+                let { error: error2 } = await supabaseClient.auth.verifyOtp({ email, token, type: 'signup' });
+                if (error2) return alert("Code falsch.");
             }
             showApp();
         }
@@ -139,8 +114,7 @@
             const { data: existing } = await supabaseClient.from('favorites').select('*').eq('user_id', user.id).eq('agenda_id', agendaId).maybeSingle();
             if (existing) await supabaseClient.from('favorites').delete().eq('id', existing.id);
             else await supabaseClient.from('favorites').insert([{ user_id: user.id, agenda_id: agendaId }]);
-            const currentTitle = document.getElementById('view-title').innerText;
-            showView(currentTitle === 'MY PLAN' ? 'my-plan' : 'agenda');
+            showView(document.getElementById('view-title').innerText === 'MY PLAN' ? 'my-plan' : 'agenda');
         }
 
         async function showView(view) {
@@ -155,19 +129,14 @@
             if (view === 'agenda' || view === 'my-plan') {
                 let query = supabaseClient.from('agenda').select('*, favorites(user_id)');
                 if (view === 'my-plan') {
-                    const { data: favs } = await supabaseClient.from('favorites').select('agenda_id').eq('user_id', user.id);
-                    query = query.in('id', favs ? favs.map(f => f.agenda_id) : []);
+                    const { data: f } = await supabaseClient.from('favorites').select('agenda_id').eq('user_id', user.id);
+                    query = query.in('id', f && f.length > 0 ? f.map(x => x.agenda_id) : ['00000000-0000-0000-0000-000000000000']);
                 }
-                const { data: agendaData } = await query.order('start_time');
-                content.innerHTML = agendaData?.map(item => `
-                    <div class="bg-white/5 p-6 rounded-3xl flex justify-between items-center border border-white/5">
-                        <div>
-                            <p class="text-[10px] font-bold text-pink-300 uppercase">${item.start_time.slice(0,5)}</p>
-                            <p class="text-xl font-bold uppercase italic tracking-tighter">${item.title}</p>
-                        </div>
-                        <button onclick="toggleFavorite('${item.id}')" class="text-2xl ${item.favorites?.some(f => f.user_id === user.id) ? 'is-fav' : 'opacity-10'}">
-                            <i class="fas fa-star"></i>
-                        </button>
+                const { data: agenda } = await query.order('start_time');
+                content.innerHTML = agenda?.map(item => `
+                    <div class="bg-white/5 p-6 rounded-3xl flex justify-between items-center">
+                        <div><p class="text-pink-300 text-[10px] font-bold">${item.start_time.slice(0,5)}</p><p class="text-xl font-bold italic">${item.title}</p></div>
+                        <button onclick="toggleFavorite('${item.id}')" class="text-2xl ${item.favorites?.some(f => f.user_id === user.id) ? 'is-fav' : 'opacity-10'}"><i class="fas fa-star"></i></button>
                     </div>
                 `).join('') || 'Keine Einträge.';
             }
@@ -175,21 +144,11 @@
             if (view === 'locations') {
                 const { data: locs } = await supabaseClient.from('locations').select('*');
                 content.innerHTML = locs?.map(l => `
-                    <div onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l.address)}')" class="bg-white/5 p-6 rounded-3xl border border-white/5 flex justify-between items-center">
-                        <div><p class="text-xl font-bold uppercase italic">${l.name}</p><p class="text-xs opacity-40">${l.address}</p></div>
+                    <div onclick="window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(l.address))" class="bg-white/5 p-6 rounded-3xl flex justify-between items-center">
+                        <div><p class="text-xl font-bold italic">${l.name}</p><p class="text-xs opacity-40">${l.address}</p></div>
                         <i class="fas fa-directions text-pink-200 opacity-50"></i>
                     </div>
                 `).join('') || 'Keine Locations.';
-            }
-            
-            if (view === 'contact') {
-                content.innerHTML = `
-                    <div class="bg-white/5 p-8 rounded-3xl border border-white/5 text-center">
-                        <i class="fab fa-whatsapp text-5xl mb-4 text-green-400"></i>
-                        <h3 class="text-xl font-bold mb-2">Support Team</h3>
-                        <p class="text-sm opacity-50 mb-6">Hast du Fragen vor Ort in Budapest?</p>
-                        <a href="https://wa.me/491701234567" class="btn-primary inline-block">WhatsApp Chat</a>
-                    </div>`;
             }
         }
 
