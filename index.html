@@ -59,12 +59,12 @@
     <div class="main-content px-6">
         <div id="login-screen">
             <div id="email-step" class="w-full max-w-xs mx-auto text-center mt-10">
-                <h2 class="text-2xl font-bold uppercase italic mb-8">Login</h2>
-                <input type="email" id="email-login" placeholder="E-Mail" class="text-center font-bold">
+                <h2 class="text-2xl font-bold uppercase italic mb-8 text-white">Login</h2>
+                <input type="email" id="email-login" placeholder="E-Mail Adresse" class="text-center font-bold">
                 <button onclick="handleRequestOtp()" class="w-full bg-[#F3D1D1] text-black font-bold p-4 rounded-xl mt-4">Code anfordern</button>
             </div>
             <div id="otp-step" class="w-full max-w-xs mx-auto text-center mt-10 hidden">
-                <h2 class="text-2xl font-bold uppercase italic mb-4">Code prüfen</h2>
+                <h2 class="text-2xl font-bold uppercase italic mb-4 text-white">Code prüfen</h2>
                 <input type="text" id="otp-code" placeholder="Code" class="tracking-[0.5em] text-xl text-center font-bold">
                 <button onclick="handleVerifyOtp()" class="w-full bg-[#F3D1D1] text-black font-bold p-4 rounded-xl mt-4">Einloggen</button>
             </div>
@@ -86,7 +86,7 @@
                     <button onclick="changeDay('2026-03-25', this)" class="day-tab">25.03.</button>
                     <button onclick="changeDay('2026-03-26', this)" class="day-tab">26.03.</button>
                 </div>
-                <h2 id="view-title" class="text-4xl font-black italic uppercase mb-6 leading-tight"></h2>
+                <h2 id="view-title" class="text-4xl font-black italic uppercase mb-6 leading-tight text-white"></h2>
                 <div id="view-content"></div>
             </div>
         </div>
@@ -97,28 +97,26 @@
         const SUPABASE_KEY = 'sb_publishable_Tjfcf2J34DrY0sHsdpXgLw_y2_0A_rm';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // HIER DEINE ADMIN EMAIL EINTRAGEN
-        const ADMIN_EMAILS = ['text.falter@gmail.com'];
+        // HIER DEINE E-MAIL EINTRAGEN
+        const ADMIN_EMAILS = ['admin@deinedomain.com'];
 
         let currentDay = '2026-03-23';
         let openCats = new Set(); 
         let activeView = 'home';
 
-        // INITIALISIERUNG
+        // --- AUTH & INITIALISIERUNG ---
         async function checkUser() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
                 showApp();
-                if (ADMIN_EMAILS.includes(session.user.email)) document.getElementById('admin-tile').classList.remove('hidden');
+                if (ADMIN_EMAILS.includes(session.user.email)) {
+                    document.getElementById('admin-tile').classList.remove('hidden');
+                }
                 checkNewNotifications();
-                registerServiceWorker();
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.register('/sw.js').catch(e => console.log("SW Error", e));
+                }
             } else { showLogin(); }
-        }
-
-        async function registerServiceWorker() {
-            if ('serviceWorker' in navigator) {
-                try { await navigator.serviceWorker.register('/sw.js'); } catch (e) { console.log('SW failed', e); }
-            }
         }
 
         function showApp() {
@@ -132,27 +130,32 @@
             document.getElementById('protected-content').classList.add('hidden');
         }
 
-        // LOGIN LOGIK
         async function handleRequestOtp() {
             const email = document.getElementById('email-login').value;
+            if(!email) return alert("E-Mail fehlt");
             const { error } = await supabaseClient.auth.signInWithOtp({ email });
             if (error) alert(error.message);
-            else { document.getElementById('email-step').classList.add('hidden'); document.getElementById('otp-step').classList.remove('hidden'); }
+            else { 
+                document.getElementById('email-step').classList.add('hidden'); 
+                document.getElementById('otp-step').classList.remove('hidden'); 
+            }
         }
 
         async function handleVerifyOtp() {
             const email = document.getElementById('email-login').value;
             const token = document.getElementById('otp-code').value.trim();
             const { error } = await supabaseClient.auth.verifyOtp({ email, token, type: 'magiclink' });
-            if (error) alert("Code falsch."); else location.reload();
+            if (error) alert("Code ungültig oder abgelaufen."); 
+            else location.reload();
         }
 
-        // NAVIGATION
+        // --- NAVIGATION ---
         function showHome() {
             activeView = 'home';
             document.getElementById('home-view').classList.remove('hidden');
             document.getElementById('detail-view').classList.add('hidden');
             document.getElementById('back-btn').classList.add('opacity-0', 'pointer-events-none');
+            document.getElementById('day-picker').classList.add('hidden');
         }
 
         function changeDay(day, btn) {
@@ -160,7 +163,96 @@
             openCats.clear(); 
             document.querySelectorAll('.day-tab').forEach(t => t.classList.remove('active'));
             btn.classList.add('active');
-            activeView === 'agenda' ? renderAgenda() : renderMyPlan();
+            if (activeView === 'agenda') renderAgenda();
+            else if (activeView === 'my-plan') renderMyPlan();
+        }
+
+        async function showView(view) {
+            activeView = view;
+            document.getElementById('home-view').classList.add('hidden');
+            document.getElementById('detail-view').classList.remove('hidden');
+            document.getElementById('back-btn').classList.remove('opacity-0', 'pointer-events-none');
+            document.getElementById('view-title').innerText = view.replace('-', ' ');
+            
+            // Day-Picker Sichtbarkeit
+            const hasDayPicker = (view === 'agenda' || view === 'my-plan');
+            document.getElementById('day-picker').classList.toggle('hidden', !hasDayPicker);
+
+            if (view === 'agenda') renderAgenda();
+            else if (view === 'my-plan') renderMyPlan();
+            else if (view === 'locations') renderLocations();
+            else if (view === 'contact') renderContact();
+            else if (view === 'notifications') renderNotifications();
+            else if (view === 'admin') renderAdmin();
+        }
+
+        // --- AGENDA & FAVORITEN ---
+        async function renderAgenda() {
+            const container = document.getElementById('view-content');
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            const { data: items } = await supabaseClient.from('agenda').select('*, favorites(user_id)').eq('event_day', currentDay).order('start_time');
+            
+            const cats = ['BRAND', 'COMMERCIAL', 'FASHION', 'RUNNING', 'FOOTBALL', 'OUTDOOR'];
+            container.innerHTML = cats.map(cat => {
+                const isOpen = openCats.has(cat);
+                const catItems = items?.filter(i => i.category === cat) || [];
+                return `
+                <div class="mb-4">
+                    <div class="category-header text-white" onclick="toggleCategory('${cat}')">
+                        <span>${cat}</span>
+                        <i id="cat-icon-${cat}" class="fas fa-chevron-${isOpen ? 'up' : 'down'} opacity-30 text-xs"></i>
+                    </div>
+                    <div id="cat-content-${cat}" class="space-y-2 ${isOpen ? '' : 'hidden'}">
+                        ${catItems.length ? catItems.map(item => {
+                            const isFav = item.favorites?.some(f => f.user_id === user.id);
+                            return `
+                            <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center border border-white/5">
+                                <div>
+                                    <p class="text-[10px] text-pink-300 font-bold">${item.start_time.slice(0,5)} ${item.location_name}</p>
+                                    <p class="font-bold text-sm uppercase text-white">${item.title}</p>
+                                </div>
+                                <button id="fav-${item.id}" onclick="toggleFav('${item.id}')" class="text-2xl ${isFav ? 'is-fav' : 'opacity-10'}">
+                                    <i class="fas fa-star"></i>
+                                </button>
+                            </div>`;
+                        }).join('') : '<p class="text-xs opacity-20 p-2">Keine Events geplant.</p>'}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function renderMyPlan() {
+            const container = document.getElementById('view-content');
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            const { data: f } = await supabaseClient.from('favorites').select('agenda_id').eq('user_id', user.id);
+            const favIds = f?.map(x => x.agenda_id) || [];
+
+            if (!favIds.length) {
+                container.innerHTML = `<p class="opacity-30 text-center py-10 italic">Keine Favoriten gespeichert.</p>`;
+                return;
+            }
+
+            const { data: items } = await supabaseClient.from('agenda').select('*').in('id', favIds).eq('event_day', currentDay).order('start_time');
+            
+            container.innerHTML = items?.length > 0 ? items.map(item => `
+                <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center mb-3 border border-white/5">
+                    <div>
+                        <p class="text-[10px] text-pink-300 font-bold">${item.start_time.slice(0,5)} ${item.location_name}</p>
+                        <p class="font-bold text-sm uppercase text-white">${item.title}</p>
+                    </div>
+                    <button id="fav-${item.id}" onclick="toggleFav('${item.id}')" class="text-2xl is-fav"><i class="fas fa-star"></i></button>
+                </div>`).join('') : '<p class="opacity-30 text-center py-10 italic text-white">Keine Favoriten für diesen Tag.</p>';
+        }
+
+        async function toggleFav(id) {
+            const btns = document.querySelectorAll(`[id="fav-${id}"]`);
+            const isFav = btns[0] ? btns[0].classList.contains('is-fav') : false;
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            
+            if (isFav) await supabaseClient.from('favorites').delete().eq('user_id', user.id).eq('agenda_id', id);
+            else await supabaseClient.from('favorites').insert([{ user_id: user.id, agenda_id: id }]);
+
+            if (activeView === 'my-plan') renderMyPlan(); else renderAgenda();
         }
 
         function toggleCategory(cat) {
@@ -177,79 +269,11 @@
             }
         }
 
-        async function showView(view) {
-            activeView = view;
-            document.getElementById('home-view').classList.add('hidden');
-            document.getElementById('detail-view').classList.remove('hidden');
-            document.getElementById('back-btn').classList.remove('opacity-0', 'pointer-events-none');
-            document.getElementById('view-title').innerText = view.replace('-', ' ');
-            document.getElementById('day-picker').classList.toggle('hidden', (view !== 'agenda' && view !== 'my-plan'));
-
-            if (view === 'agenda') renderAgenda();
-            if (view === 'my-plan') renderMyPlan();
-            if (view === 'locations') renderLocations();
-            if (view === 'contact') renderContact();
-            if (view === 'notifications') renderNotifications();
-            if (view === 'admin') renderAdmin();
-        }
-
-        // RENDERING
-        async function renderAgenda() {
-            const container = document.getElementById('view-content');
-            const { data: { user } } = await supabaseClient.auth.getUser();
-            const { data: items } = await supabaseClient.from('agenda').select('*, favorites(user_id)').eq('event_day', currentDay).order('start_time');
-            const cats = ['BRAND', 'COMMERCIAL', 'FASHION', 'RUNNING', 'FOOTBALL', 'OUTDOOR'];
-            
-            container.innerHTML = cats.map(cat => {
-                const isOpen = openCats.has(cat);
-                const catItems = items?.filter(i => i.category === cat) || [];
-                return `
-                <div class="mb-4">
-                    <div class="category-header" onclick="toggleCategory('${cat}')">
-                        <span>${cat}</span><i id="cat-icon-${cat}" class="fas fa-chevron-${isOpen ? 'up' : 'down'} opacity-30 text-xs"></i>
-                    </div>
-                    <div id="cat-content-${cat}" class="space-y-2 ${isOpen ? '' : 'hidden'}">
-                        ${catItems.map(item => {
-                            const isFav = item.favorites?.some(f => f.user_id === user.id);
-                            return `
-                            <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center border border-white/5">
-                                <div><p class="text-[10px] text-pink-300 font-bold">${item.start_time.slice(0,5)} ${item.location_name}</p><p class="font-bold text-sm uppercase">${item.title}</p></div>
-                                <button id="fav-${item.id}" onclick="toggleFav('${item.id}')" class="text-2xl ${isFav ? 'is-fav' : 'opacity-10'}"><i class="fas fa-star"></i></button>
-                            </div>`;
-                        }).join('')}
-                    </div>
-                </div>`;
-            }).join('');
-        }
-
-        async function renderMyPlan() {
-            const container = document.getElementById('view-content');
-            const { data: { user } } = await supabaseClient.auth.getUser();
-            const { data: f } = await supabaseClient.from('favorites').select('agenda_id').eq('user_id', user.id);
-            const { data: items } = await supabaseClient.from('agenda').select('*').in('id', f?.map(x => x.agenda_id) || []).eq('event_day', currentDay).order('start_time');
-            
-            container.innerHTML = items?.length > 0 ? items.map(item => `
-                <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center mb-3 border border-white/5">
-                    <div><p class="text-[10px] text-pink-300 font-bold">${item.start_time.slice(0,5)} ${item.location_name}</p><p class="font-bold text-sm uppercase">${item.title}</p></div>
-                    <button id="fav-${item.id}" onclick="toggleFav('${item.id}')" class="text-2xl is-fav"><i class="fas fa-star"></i></button>
-                </div>`).join('') : '<p class="opacity-30 text-center py-10 italic">Keine Favoriten für diesen Tag.</p>';
-        }
-
-        async function toggleFav(id) {
-            const btns = document.querySelectorAll(`[id="fav-${id}"]`);
-            const isFav = btns[0] ? btns[0].classList.contains('is-fav') : false;
-            const { data: { user } } = await supabaseClient.auth.getUser();
-            btns.forEach(btn => { if (isFav) { btn.classList.remove('is-fav'); btn.classList.add('opacity-10'); } else { btn.classList.add('is-fav'); btn.classList.remove('opacity-10'); }});
-            if (isFav) await supabaseClient.from('favorites').delete().eq('user_id', user.id).eq('agenda_id', id);
-            else await supabaseClient.from('favorites').insert([{ user_id: user.id, agenda_id: id }]);
-            if (activeView === 'my-plan') setTimeout(renderMyPlan, 300);
-        }
-
-        // NOTIFICATIONS & ADMIN
+        // --- NOTIFICATIONS ---
         async function checkNewNotifications() {
             const lastRead = localStorage.getItem('last_noti_read') || '1970-01-01T00:00:00Z';
             const { data } = await supabaseClient.from('notifications').select('created_at').gt('created_at', lastRead).limit(1);
-            if (data && data.length > 0) document.getElementById('noti-badge').classList.remove('hidden');
+            if (data?.length > 0) document.getElementById('noti-badge').classList.remove('hidden');
         }
 
         function showNotifications() {
@@ -261,32 +285,44 @@
         async function renderNotifications() {
             const container = document.getElementById('view-content');
             const { data: { user } } = await supabaseClient.auth.getUser();
+            
             const { data: profile } = await supabaseClient.from('profiles').select('user_group').eq('id', user.id).single();
             const group = profile?.user_group || 'ALL';
-            const { data: notis } = await supabaseClient.from('notifications').select('*').or(`target_group.eq.ALL,target_group.eq.${group},target_user_id.eq.${user.id}`).order('created_at', { ascending: false });
 
-            container.innerHTML = notis?.map(n => `
+            const { data: notis } = await supabaseClient.from('notifications')
+                .select('*')
+                .or(`target_group.eq.ALL,target_group.eq.${group},target_user_id.eq.${user.id}`)
+                .order('created_at', { ascending: false });
+
+            container.innerHTML = notis?.length ? notis.map(n => `
                 <div class="bg-white/5 p-6 rounded-3xl mb-4 border-l-4 border-[#F3D1D1]">
                     <p class="text-[10px] opacity-30 mb-1">${new Date(n.created_at).toLocaleString('de-DE')}</p>
-                    <h3 class="font-black italic uppercase text-lg mb-1">${n.title}</h3><p class="text-sm opacity-70">${n.message}</p>
-                </div>`).join('') || '<p class="opacity-30 text-center py-10">Keine Nachrichten.</p>';
+                    <h3 class="font-black italic uppercase text-lg mb-1 text-white">${n.title}</h3>
+                    <p class="text-sm opacity-70 text-white">${n.message}</p>
+                </div>`).join('') : '<p class="opacity-30 text-center py-10 italic text-white">Keine Nachrichten.</p>';
         }
 
+        // --- ADMIN BEREICH ---
         async function renderAdmin() {
             const container = document.getElementById('view-content');
             const { data: users } = await supabaseClient.from('profiles').select('*').order('email');
             
             container.innerHTML = `
                 <div class="bg-white/5 p-6 rounded-3xl mb-8 border border-white/10">
-                    <h3 class="font-bold mb-4 uppercase italic">Broadcast senden</h3>
-                    <input id="admin-title" placeholder="Titel"><textarea id="admin-msg" placeholder="Nachricht..." rows="3"></textarea>
-                    <select id="admin-group"><option value="ALL">An Alle</option><option value="CREW">CREW</option><option value="VIP">VIP</option></select>
+                    <h3 class="font-bold mb-4 uppercase italic text-white">Notification senden</h3>
+                    <input id="admin-title" placeholder="Titel">
+                    <textarea id="admin-msg" placeholder="Nachricht..." rows="3"></textarea>
+                    <select id="admin-group">
+                        <option value="ALL">An Alle (ALL)</option>
+                        <option value="CREW">Nur CREW</option>
+                        <option value="VIP">Nur VIP</option>
+                    </select>
                     <button onclick="sendAdminNoti()" class="w-full bg-[#f43f5e] text-white font-bold p-4 rounded-xl">SENDEN</button>
                 </div>
-                <h3 class="font-bold mb-4 uppercase italic">User Management</h3>
-                <div class="space-y-3">${users.map(u => `
-                    <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center">
-                        <span class="text-xs truncate mr-2">${u.email}</span>
+                <h3 class="font-bold mb-4 uppercase italic text-white">User Management</h3>
+                <div class="space-y-3">${users?.map(u => `
+                    <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center border border-white/5">
+                        <span class="text-xs truncate text-white">${u.email}</span>
                         <select onchange="updateUserGroup('${u.id}', this.value)" class="!w-24 !m-0 !py-1 text-[10px]">
                             <option value="ALL" ${u.user_group === 'ALL' ? 'selected' : ''}>ALL</option>
                             <option value="CREW" ${u.user_group === 'CREW' ? 'selected' : ''}>CREW</option>
@@ -299,30 +335,39 @@
             const title = document.getElementById('admin-title').value;
             const message = document.getElementById('admin-msg').value;
             const target_group = document.getElementById('admin-group').value;
+            if(!title || !message) return alert("Fehlende Daten");
+
             const { error } = await supabaseClient.from('notifications').insert([{ title, message, target_group }]);
-            if (error) alert(error.message); else { alert("Gesendet!"); showHome(); }
+            if (error) alert(error.message); else { alert("Nachricht verschickt!"); showHome(); }
         }
 
-        async function updateUserGroup(userId, newGroup) {
-            await supabaseClient.from('profiles').update({ user_group: newGroup }).eq('id', userId);
-            alert("Gruppe für User aktualisiert.");
+        async function updateUserGroup(uid, group) {
+            await supabaseClient.from('profiles').update({ user_group: group }).eq('id', uid);
         }
 
+        // --- ANDERE VIEWS ---
         async function renderLocations() {
             const { data: locs } = await supabaseClient.from('locations').select('*');
             document.getElementById('view-content').innerHTML = locs?.map(l => `
                 <div onclick="window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(l.address))" class="bg-white/5 p-5 rounded-2xl mb-3 flex justify-between items-center border border-white/5">
-                    <div><p class="font-bold italic uppercase text-lg">${l.name}</p><p class="text-xs opacity-40">${l.address}</p></div>
+                    <div><p class="font-bold italic uppercase text-lg text-white">${l.name}</p><p class="text-xs opacity-40 text-white">${l.address}</p></div>
                     <i class="fas fa-directions text-pink-200 opacity-40 text-xl"></i>
                 </div>`).join('');
         }
 
         function renderContact() {
-            document.getElementById('view-content').innerHTML = `<div class="bg-white/5 p-10 rounded-3xl text-center border border-white/5"><div class="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6"><i class="fab fa-whatsapp text-4xl text-green-400"></i></div><h3 class="text-2xl font-bold mb-2 uppercase italic">Support</h3><a href="https://wa.me/491701234567" class="inline-block bg-[#F3D1D1] text-black font-black py-4 px-10 rounded-2xl uppercase">WhatsApp Chat</a></div>`;
+            document.getElementById('view-content').innerHTML = `
+                <div class="bg-white/5 p-10 rounded-3xl text-center border border-white/5">
+                    <div class="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="fab fa-whatsapp text-4xl text-green-400"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-2 uppercase italic text-white">Support</h3>
+                    <p class="text-sm opacity-50 mb-8 text-white">Hilfe vor Ort benötigt?</p>
+                    <a href="https://wa.me/491701234567" class="inline-block bg-[#F3D1D1] text-black font-black py-4 px-10 rounded-2xl uppercase">WhatsApp Chat</a>
+                </div>`;
         }
 
         checkUser();
     </script>
 </body>
 </html>
-
