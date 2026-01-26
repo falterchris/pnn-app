@@ -35,9 +35,6 @@
 
         .category-header { background: rgba(255,255,255,0.05); padding: 16px; border-radius: 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-style: italic; text-transform: uppercase; cursor: pointer; }
         
-        .date-divider { color: var(--brand-rosa); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin: 24px 0 12px 4px; display: flex; align-items: center; }
-        .date-divider::after { content: ""; flex: 1; height: 1px; background: rgba(243, 209, 209, 0.15); margin-left: 15px; }
-
         .is-fav { color: #f43f5e !important; opacity: 1 !important; }
         .hidden { display: none !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -96,6 +93,7 @@
 
         let currentDay = '2026-03-23';
         let openCats = new Set(); 
+        let activeView = 'home';
 
         async function checkUser() {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -137,6 +135,7 @@
         async function handleLogout() { await supabaseClient.auth.signOut(); location.reload(); }
 
         function showHome() {
+            activeView = 'home';
             document.getElementById('home-view').classList.remove('hidden');
             document.getElementById('detail-view').classList.add('hidden');
             document.getElementById('back-btn').classList.add('opacity-0', 'pointer-events-none');
@@ -147,7 +146,9 @@
             openCats.clear(); 
             document.querySelectorAll('.day-tab').forEach(t => t.classList.remove('active'));
             btn.classList.add('active');
-            renderAgenda();
+            
+            if (activeView === 'agenda') renderAgenda();
+            else if (activeView === 'my-plan') renderMyPlan();
         }
 
         function toggleCategory(cat) {
@@ -165,11 +166,15 @@
         }
 
         async function showView(view) {
+            activeView = view;
             document.getElementById('home-view').classList.add('hidden');
             document.getElementById('detail-view').classList.remove('hidden');
             document.getElementById('back-btn').classList.remove('opacity-0', 'pointer-events-none');
             document.getElementById('view-title').innerText = view.replace('-', ' ');
-            document.getElementById('day-picker').classList.toggle('hidden', view !== 'agenda');
+            
+            // Day-Picker bei Agenda UND My Plan anzeigen
+            const showPicker = (view === 'agenda' || view === 'my-plan');
+            document.getElementById('day-picker').classList.toggle('hidden', !showPicker);
 
             if (view === 'agenda') renderAgenda();
             if (view === 'my-plan') renderMyPlan();
@@ -213,23 +218,19 @@
         }
 
         async function toggleFav(id) {
-            // WICHTIG: Suche alle Buttons mit dieser ID (da sie in Agenda und My Plan vorkommen können)
             const btns = document.querySelectorAll(`[id="fav-${id}"]`);
             const isFav = btns[0] ? btns[0].classList.contains('is-fav') : false;
             const { data: { user } } = await supabaseClient.auth.getUser();
 
-            // UI Update für alle Instanzen dieses Buttons
             btns.forEach(btn => {
                 if (isFav) { btn.classList.remove('is-fav'); btn.classList.add('opacity-10'); }
                 else { btn.classList.add('is-fav'); btn.classList.remove('opacity-10'); }
             });
 
-            // DB Update
             if (isFav) await supabaseClient.from('favorites').delete().eq('user_id', user.id).eq('agenda_id', id);
             else await supabaseClient.from('favorites').insert([{ user_id: user.id, agenda_id: id }]);
 
-            // Wenn im My Plan View, verzögert neu laden damit das Element nicht sofort unter dem Finger verschwindet
-            if (document.getElementById('view-title').innerText.toLowerCase() === 'my plan') {
+            if (activeView === 'my-plan') {
                 setTimeout(renderMyPlan, 300);
             }
         }
@@ -238,31 +239,27 @@
             const container = document.getElementById('view-content');
             const { data: { user } } = await supabaseClient.auth.getUser();
             const { data: f } = await supabaseClient.from('favorites').select('agenda_id').eq('user_id', user.id);
-            const { data: items } = await supabaseClient.from('agenda').select('*').in('id', f?.map(x => x.agenda_id) || []).order('event_day').order('start_time');
+            
+            // Filtert Favoriten NUR für den aktuell gewählten Tag
+            const { data: items } = await supabaseClient.from('agenda')
+                .select('*')
+                .in('id', f?.map(x => x.agenda_id) || [])
+                .eq('event_day', currentDay)
+                .order('start_time');
             
             if (!items || items.length === 0) {
-                container.innerHTML = '<p class="opacity-30 text-center py-10">Noch keine Favoriten markiert.</p>';
+                container.innerHTML = `<p class="opacity-30 text-center py-10 italic">Keine Favoriten für diesen Tag markiert.</p>`;
                 return;
             }
 
-            const groups = {};
-            items.forEach(item => {
-                const dateStr = new Date(item.event_day).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
-                if (!groups[dateStr]) groups[dateStr] = [];
-                groups[dateStr].push(item);
-            });
-
-            container.innerHTML = Object.keys(groups).map(date => `
-                <div class="date-divider">${date}</div>
-                ${groups[date].map(item => `
-                    <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center mb-3 border border-white/5">
-                        <div>
-                            <p class="text-[10px] text-pink-300 font-bold">${item.start_time.slice(0,5)} ${item.location_name}</p>
-                            <p class="font-bold text-sm uppercase">${item.title}</p>
-                        </div>
-                        <button id="fav-${item.id}" onclick="toggleFav('${item.id}')" class="text-2xl is-fav"><i class="fas fa-star"></i></button>
+            container.innerHTML = items.map(item => `
+                <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center mb-3 border border-white/5">
+                    <div>
+                        <p class="text-[10px] text-pink-300 font-bold">${item.start_time.slice(0,5)} ${item.location_name}</p>
+                        <p class="font-bold text-sm uppercase">${item.title}</p>
                     </div>
-                `).join('')}
+                    <button id="fav-${item.id}" onclick="toggleFav('${item.id}')" class="text-2xl is-fav"><i class="fas fa-star"></i></button>
+                </div>
             `).join('');
         }
 
