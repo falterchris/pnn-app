@@ -53,7 +53,7 @@
             <span class="text-[10px] tracking-[0.3em] opacity-40 uppercase block">Event Framework</span>
             <span class="font-black italic text-lg uppercase tracking-tight">SMM 2026</span>
         </div>
-        <button onclick="handleLogout()" id="logout-btn" class="opacity-40"><i class="fas fa-sign-out-alt text-xl"></i></button>
+        <button onclick="handleLogout()" id="logout-btn" class="opacity-40 hidden"><i class="fas fa-sign-out-alt text-xl"></i></button>
     </div>
 
     <div class="main-content px-6">
@@ -62,7 +62,7 @@
             <div class="text-center mb-8">
                 <i class="fas fa-lock text-4xl mb-4 opacity-20"></i>
                 <h2 class="text-2xl font-bold">Bitte einloggen</h2>
-                <p class="text-sm opacity-50 mt-2">Gib deine E-Mail ein, um fortzufahren.</p>
+                <p class="text-sm opacity-50 mt-2 text-center px-4">Gib deine E-Mail ein. Du erhältst einen 6-stelligen Code.</p>
             </div>
             
             <div id="email-step" class="w-full max-w-xs">
@@ -71,10 +71,10 @@
             </div>
             
             <div id="otp-step" class="w-full max-w-xs hidden text-center">
-                <p class="text-xs mb-4 text-pink-200 italic">Wir haben dir einen Link/Code geschickt.</p>
-                <input type="text" id="otp" placeholder="Code eingeben">
-                <button onclick="handleVerify()" class="btn-primary">Jetzt einloggen</button>
-                <button onclick="location.reload()" class="text-xs opacity-40 mt-6 underline">Abbrechen / Andere E-Mail</button>
+                <p class="text-xs mb-4 text-pink-200 italic">Code aus der E-Mail hier eingeben:</p>
+                <input type="text" id="otp" placeholder="6-stelliger Code" inputmode="numeric" autocomplete="one-time-code">
+                <button onclick="handleVerify()" class="btn-primary">Verifizieren & Login</button>
+                <button onclick="location.reload()" class="text-xs opacity-40 mt-6 underline">Abbrechen</button>
             </div>
         </div>
 
@@ -95,14 +95,16 @@
             </div>
 
             <div id="detail-view" class="hidden">
-                <h2 id="view-title" class="text-4xl font-black italic uppercase mb-8"></h2>
+                <div class="flex justify-between items-center mb-8">
+                    <h2 id="view-title" class="text-4xl font-black italic uppercase"></h2>
+                </div>
                 <div id="view-content" class="space-y-4"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // Deine eingebauten Supabase Daten
+        // Supabase Konfiguration
         const SUPABASE_URL = 'https://eljpoxtfxfbgnpteyrsq.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_Tjfcf2J34DrY0sHsdpXgLw_y2_0A_rm';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -121,31 +123,49 @@
             }
         }
 
-        // OTP Login anstoßen
+        // 1. E-Mail absenden (OTP anfordern)
         async function handleLogin() {
             const email = document.getElementById('email').value;
             if (!email) return alert("Bitte E-Mail eingeben");
             
             const { error } = await supabaseClient.auth.signInWithOtp({ email });
-            if (error) alert("Fehler: " + error.message);
-            else {
+            if (error) {
+                alert("Fehler: " + error.message);
+            } else {
                 document.getElementById('email-step').classList.add('hidden');
                 document.getElementById('otp-step').classList.remove('hidden');
             }
         }
 
-        // OTP Verifizieren
+        // 2. Code verifizieren
         async function handleVerify() {
             const email = document.getElementById('email').value;
             const token = document.getElementById('otp').value;
-            const { error } = await supabaseClient.auth.verifyOtp({ 
+            
+            if (!token) return alert("Bitte Code eingeben");
+
+            // Wir versuchen erst den Typ 'signup' (für neue User)
+            let { error } = await supabaseClient.auth.verifyOtp({ 
                 email, 
                 token, 
-                type: 'magiclink' 
+                type: 'signup' 
             });
             
-            if (error) alert("Falscher Code: " + error.message);
-            else checkUser();
+            // Wenn das fehlschlägt, versuchen wir 'magiclink' (für bestehende User)
+            if (error) {
+                const { error: retryError } = await supabaseClient.auth.verifyOtp({ 
+                    email, 
+                    token, 
+                    type: 'magiclink' 
+                });
+                if (retryError) {
+                    alert("Code ungültig: " + retryError.message);
+                    return;
+                }
+            }
+            
+            // Wenn einer von beiden geklappt hat
+            checkUser();
         }
 
         async function handleLogout() {
@@ -165,7 +185,7 @@
 
             if (view === 'agenda') {
                 title.innerText = 'Agenda';
-                const { data: agendaData, error } = await supabaseClient
+                const { data: agendaData } = await supabaseClient
                     .from('agenda')
                     .select('*')
                     .order('start_time', { ascending: true });
@@ -178,14 +198,17 @@
                                 <p class="text-lg font-bold">${item.title}</p>
                                 <p class="text-xs opacity-40">${item.location_name || 'No Location'}</p>
                             </div>
-                            <button onclick="toggleStar('${item.id}')" class="text-2xl text-white/20">
+                            <button class="text-2xl text-white/20">
                                 <i class="fas fa-star"></i>
                             </button>
                         </div>
                     `).join('');
                 } else {
-                    content.innerHTML = '<div class="text-center py-10 opacity-30 italic">Noch keine Agenda-Einträge in Supabase.</div>';
+                    content.innerHTML = '<div class="text-center py-10 opacity-30 italic">Noch keine Agenda-Einträge gefunden. Trage welche im Supabase Table-Editor ein!</div>';
                 }
+            } else {
+                title.innerText = view.charAt(0).toUpperCase() + view.slice(1);
+                content.innerHTML = '<p class="text-center py-10 opacity-40">Hier folgen bald die Inhalte für ' + view + '.</p>';
             }
         }
 
@@ -195,7 +218,7 @@
             document.getElementById('back-btn').classList.add('pointer-events-none', 'opacity-0');
         }
 
-        // Beim Start checken
+        // App-Start
         checkUser();
     </script>
 </body>
