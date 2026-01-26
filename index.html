@@ -3,27 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>SMM 2026</title>
+    <title>SMM 2026 - Master Framework</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root { --brand-rosa: #F3D1D1; }
-        body { background: #000; color: #f3f4f6; font-family: 'Inter', sans-serif; margin: 0; }
-        .sticky-header { position: fixed; top: 0; left: 0; right: 0; height: calc(env(safe-area-inset-top) + 65px); background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(15px); z-index: 1000; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 24px 15px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        body { background: #000; color: #f3f4f6; font-family: 'Inter', sans-serif; margin: 0; -webkit-tap-highlight-color: transparent; }
+        
+        .sticky-header { 
+            position: fixed; top: 0; left: 0; right: 0; 
+            height: calc(env(safe-area-inset-top) + 65px); 
+            background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(15px); 
+            z-index: 1000; display: flex; align-items: flex-end; justify-content: space-between; 
+            padding: 0 24px 15px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); 
+        }
+
         .main-content { padding-top: calc(env(safe-area-inset-top) + 85px); padding-bottom: 40px; }
-        .grid-tile { background-color: var(--brand-rosa); color: #4A3B3B; aspect-ratio: 1/1; border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; text-transform: uppercase; font-size: 0.85rem; }
-        .day-tab { padding: 8px 16px; border-radius: 12px; font-size: 12px; font-weight: bold; opacity: 0.4; transition: 0.3s; border: 1px solid transparent; white-space: nowrap; }
-        .day-tab.active { opacity: 1; background: var(--brand-rosa); color: #000; }
-        .category-header { background: rgba(255,255,255,0.05); padding: 16px; border-radius: 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-style: italic; }
-        .is-fav { color: #f43f5e !important; }
+        
+        .grid-tile { 
+            background-color: var(--brand-rosa); color: #4A3B3B; 
+            aspect-ratio: 1/1; border-radius: 22px; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            font-weight: 800; text-transform: uppercase; font-size: 0.85rem; 
+            transition: transform 0.1s;
+        }
+        .grid-tile:active { transform: scale(0.95); }
+
+        .day-tab { padding: 8px 16px; border-radius: 12px; font-size: 12px; font-weight: bold; opacity: 0.4; transition: 0.3s; white-space: nowrap; border: 1px solid rgba(255,255,255,0.1); }
+        .day-tab.active { opacity: 1; background: var(--brand-rosa); color: #000; border-color: var(--brand-rosa); }
+
+        .category-header { background: rgba(255,255,255,0.05); padding: 16px; border-radius: 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-style: italic; text-transform: uppercase; cursor: pointer; }
+        
+        .is-fav { color: #f43f5e !important; opacity: 1 !important; }
         .hidden { display: none !important; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
 
     <div class="sticky-header">
-        <button id="back-btn" onclick="showHome()" class="opacity-0 pointer-events-none"><i class="fas fa-chevron-left text-2xl"></i></button>
+        <button id="back-btn" onclick="showHome()" class="opacity-0 pointer-events-none transition-opacity"><i class="fas fa-chevron-left text-2xl"></i></button>
         <div class="text-center">
             <span class="text-[10px] tracking-[0.3em] opacity-40 uppercase block">Event Framework</span>
             <span class="font-black italic text-lg uppercase tracking-tight">SMM 2026</span>
@@ -33,14 +53,15 @@
 
     <div class="main-content px-6">
         <div id="login-screen">
-            <div id="email-step" class="w-full max-w-xs mx-auto text-center mt-20">
+            <div id="email-step" class="w-full max-w-xs mx-auto text-center mt-10">
                 <h2 class="text-2xl font-bold uppercase italic mb-8">Login</h2>
-                <input type="email" id="email" placeholder="E-Mail Adresse" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-center mb-4 outline-none">
+                <input type="email" id="email" placeholder="E-Mail Adresse" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-center mb-4 outline-none text-white">
                 <button onclick="handleRequestOtp()" class="w-full bg-[#F3D1D1] text-black font-bold p-4 rounded-xl">Code anfordern</button>
             </div>
-            <div id="otp-step" class="w-full max-w-xs mx-auto text-center mt-20 hidden">
+            <div id="otp-step" class="w-full max-w-xs mx-auto text-center mt-10 hidden">
                 <h2 class="text-2xl font-bold uppercase italic mb-4">Code prüfen</h2>
-                <input type="text" id="otp-code" placeholder="Code eingeben" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-center mb-4 outline-none tracking-widest text-xl">
+                <p class="text-xs opacity-50 mb-6">Prüfe dein Postfach (6 oder 8 Stellen)</p>
+                <input type="text" id="otp-code" placeholder="Code eingeben" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-center mb-4 outline-none tracking-[0.5em] text-xl text-white">
                 <button onclick="handleVerifyOtp()" class="w-full bg-[#F3D1D1] text-black font-bold p-4 rounded-xl">Einloggen</button>
             </div>
         </div>
@@ -54,13 +75,13 @@
             </div>
 
             <div id="detail-view" class="hidden">
-                <div id="day-picker" class="flex overflow-x-auto gap-2 mb-6 no-scrollbar">
+                <div id="day-picker" class="flex overflow-x-auto gap-2 mb-6 no-scrollbar pb-2 hidden">
                     <button onclick="changeDay('2026-03-23', this)" class="day-tab active">23.03.</button>
                     <button onclick="changeDay('2026-03-24', this)" class="day-tab">24.03.</button>
                     <button onclick="changeDay('2026-03-25', this)" class="day-tab">25.03.</button>
                     <button onclick="changeDay('2026-03-26', this)" class="day-tab">26.03.</button>
                 </div>
-                <h2 id="view-title" class="text-4xl font-black italic uppercase mb-6"></h2>
+                <h2 id="view-title" class="text-4xl font-black italic uppercase mb-6 leading-tight"></h2>
                 <div id="view-content"></div>
             </div>
         </div>
@@ -71,8 +92,8 @@
         const SUPABASE_KEY = 'sb_publishable_Tjfcf2J34DrY0sHsdpXgLw_y2_0A_rm';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true } });
 
-        let currentSelectedDay = '2026-03-23';
-        let openCategories = new Set(); // Speichert, was offen ist
+        let currentDay = '2026-03-23';
+        let openCats = new Set(); 
 
         async function checkUser() {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -102,82 +123,106 @@
 
         async function handleVerifyOtp() {
             const email = document.getElementById('email').value;
-            const token = document.getElementById('otp-code').value;
-            const { error } = await supabaseClient.auth.verifyOtp({ email, token, type: 'magiclink' });
-            if (error) alert("Code falsch."); else showApp();
+            const token = document.getElementById('otp-code').value.trim();
+            let { error } = await supabaseClient.auth.verifyOtp({ email, token, type: 'magiclink' });
+            if (error) {
+                let { error: e2 } = await supabaseClient.auth.verifyOtp({ email, token, type: 'signup' });
+                if (e2) return alert("Code ungültig.");
+            }
+            showApp();
         }
 
         async function handleLogout() { await supabaseClient.auth.signOut(); location.reload(); }
 
+        function showHome() {
+            document.getElementById('home-view').classList.remove('hidden');
+            document.getElementById('detail-view').classList.add('hidden');
+            document.getElementById('back-btn').classList.add('opacity-0', 'pointer-events-none');
+        }
+
         function changeDay(day, btn) {
-            currentSelectedDay = day;
-            document.querySelectorAll('.day-tab').forEach(b => b.classList.remove('active'));
+            currentDay = day;
+            document.querySelectorAll('.day-tab').forEach(t => t.classList.remove('active'));
             btn.classList.add('active');
             renderAgenda();
         }
 
         function toggleCategory(cat) {
-            if (openCategories.has(cat)) openCategories.delete(cat);
-            else openCategories.add(cat);
-            renderAgenda();
+            const content = document.getElementById(`cat-content-${cat}`);
+            const icon = document.getElementById(`cat-icon-${cat}`);
+            if (openCats.has(cat)) {
+                openCats.delete(cat);
+                content.classList.add('hidden');
+                icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+            } else {
+                openCats.add(cat);
+                content.classList.remove('hidden');
+                icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+            }
         }
 
         async function showView(view) {
             document.getElementById('home-view').classList.add('hidden');
             document.getElementById('detail-view').classList.remove('hidden');
-            document.getElementById('back-btn').classList.remove('pointer-events-none', 'opacity-0');
-            document.getElementById('view-title').innerText = view.toUpperCase();
+            document.getElementById('back-btn').classList.remove('opacity-0', 'pointer-events-none');
+            document.getElementById('view-title').innerText = view.replace('-', ' ');
             document.getElementById('day-picker').classList.toggle('hidden', view !== 'agenda');
 
             if (view === 'agenda') renderAgenda();
-            else if (view === 'my-plan') renderMyPlan();
-            else if (view === 'locations') renderLocations();
-            else if (view === 'contact') renderContact();
+            if (view === 'my-plan') renderMyPlan();
+            if (view === 'locations') renderLocations();
+            if (view === 'contact') renderContact();
         }
 
         async function renderAgenda() {
-            const content = document.getElementById('view-content');
+            const container = document.getElementById('view-content');
             const { data: { user } } = await supabaseClient.auth.getUser();
             const { data: items } = await supabaseClient.from('agenda').select('*, favorites(user_id)')
-                .eq('event_day', currentSelectedDay).order('start_time');
+                .eq('event_day', currentDay).order('start_time');
 
             const cats = ['BRAND', 'COMMERCIAL', 'FASHION', 'RUNNING', 'FOOTBALL', 'OUTDOOR'];
-            content.innerHTML = cats.map(cat => {
-                const isOpen = openCategories.has(cat);
+            container.innerHTML = cats.map(cat => {
+                const isOpen = openCats.has(cat);
                 const catItems = items?.filter(i => i.category === cat) || [];
                 return `
-                    <div class="mb-4">
-                        <div class="category-header" onclick="toggleCategory('${cat}')">
-                            <span>${cat}</span>
-                            <i class="fas fa-chevron-${isOpen ? 'up' : 'down'} opacity-30 text-xs"></i>
-                        </div>
-                        <div class="space-y-2 ${isOpen ? '' : 'hidden'}">
-                            ${catItems.map(item => {
-                                const isFav = item.favorites?.some(f => f.user_id === user.id);
-                                return `
-                                    <div class="bg-white/5 p-4 rounded-xl flex justify-between items-center">
-                                        <div>
-                                            <p class="text-[10px] text-pink-300 font-bold">${item.start_time.slice(0,5)} ${item.location_name}</p>
-                                            <p class="font-bold text-sm uppercase">${item.title}</p>
-                                        </div>
-                                        <button onclick="toggleFav('${item.id}')" class="text-xl ${isFav ? 'is-fav' : 'opacity-10'}">
-                                            <i class="fas fa-star"></i>
-                                        </button>
-                                    </div>`;
-                            }).join('')}
-                        </div>
-                    </div>`;
+                <div class="mb-4">
+                    <div class="category-header" onclick="toggleCategory('${cat}')">
+                        <span>${cat}</span>
+                        <i id="cat-icon-${cat}" class="fas fa-chevron-${isOpen ? 'up' : 'down'} opacity-30 text-xs"></i>
+                    </div>
+                    <div id="cat-content-${cat}" class="space-y-2 ${isOpen ? '' : 'hidden'}">
+                        ${catItems.map(item => {
+                            const isFav = item.favorites?.some(f => f.user_id === user.id);
+                            return `
+                            <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center border border-white/5">
+                                <div>
+                                    <p class="text-[10px] text-pink-300 font-bold">${item.start_time.slice(0,5)} ${item.location_name}</p>
+                                    <p class="font-bold text-sm uppercase">${item.title}</p>
+                                </div>
+                                <button id="fav-${item.id}" onclick="toggleFav('${item.id}')" class="text-2xl ${isFav ? 'is-fav' : 'opacity-10'}">
+                                    <i class="fas fa-star"></i>
+                                </button>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>`;
             }).join('');
         }
 
         async function toggleFav(id) {
+            const btn = document.getElementById(`fav-${id}`);
+            const isFav = btn.classList.contains('is-fav');
             const { data: { user } } = await supabaseClient.auth.getUser();
-            const { data: existing } = await supabaseClient.from('favorites').select('id').eq('user_id', user.id).eq('agenda_id', id).maybeSingle();
-            if (existing) await supabaseClient.from('favorites').delete().eq('id', existing.id);
+
+            // UI Update sofort
+            if (isFav) { btn.classList.remove('is-fav'); btn.classList.add('opacity-10'); }
+            else { btn.classList.add('is-fav'); btn.classList.remove('opacity-10'); }
+
+            // DB im Hintergrund
+            if (isFav) await supabaseClient.from('favorites').delete().eq('user_id', user.id).eq('agenda_id', id);
             else await supabaseClient.from('favorites').insert([{ user_id: user.id, agenda_id: id }]);
-            
-            if (document.getElementById('view-title').innerText === 'AGENDA') renderAgenda();
-            else renderMyPlan();
+
+            if (document.getElementById('view-title').innerText.toLowerCase() === 'my plan') renderMyPlan();
         }
 
         async function renderMyPlan() {
@@ -186,36 +231,32 @@
             const { data: items } = await supabaseClient.from('agenda').select('*').in('id', f?.map(x => x.agenda_id) || []).order('event_day').order('start_time');
             
             document.getElementById('view-content').innerHTML = items?.map(item => `
-                <div class="bg-white/5 p-4 rounded-xl flex justify-between items-center mb-2">
+                <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center mb-3 border border-white/5">
                     <div><p class="text-[10px] text-pink-300 font-bold">${item.event_day.slice(8,10)}.${item.event_day.slice(5,7)}. | ${item.start_time.slice(0,5)}</p>
                     <p class="font-bold text-sm uppercase">${item.title}</p></div>
-                    <button onclick="toggleFav('${item.id}')" class="text-xl is-fav"><i class="fas fa-star"></i></button>
-                </div>`).join('') || '<p class="opacity-30">Noch keine Favoriten.</p>';
+                    <button onclick="toggleFav('${item.id}')" class="text-2xl is-fav"><i class="fas fa-star"></i></button>
+                </div>`).join('') || '<p class="opacity-30 text-center py-10">Noch keine Favoriten markiert.</p>';
         }
 
         async function renderLocations() {
             const { data: locs } = await supabaseClient.from('locations').select('*');
             document.getElementById('view-content').innerHTML = locs?.map(l => `
-                <div onclick="window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(l.address))" class="bg-white/5 p-5 rounded-2xl mb-3 flex justify-between items-center">
-                    <div><p class="font-bold italic uppercase">${l.name}</p><p class="text-xs opacity-40">${l.address}</p></div>
-                    <i class="fas fa-directions text-pink-200 opacity-50"></i>
-                </div>`).join('') || '<p class="opacity-30">Keine Locations.</p>';
+                <div onclick="window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(l.address))" class="bg-white/5 p-5 rounded-2xl mb-3 flex justify-between items-center border border-white/5">
+                    <div><p class="font-bold italic uppercase text-lg">${l.name}</p><p class="text-xs opacity-40">${l.address}</p></div>
+                    <i class="fas fa-directions text-pink-200 opacity-40 text-xl"></i>
+                </div>`).join('') || '<p class="opacity-30">Keine Locations hinterlegt.</p>';
         }
 
         function renderContact() {
             document.getElementById('view-content').innerHTML = `
-                <div class="bg-white/5 p-8 rounded-3xl text-center">
-                    <i class="fab fa-whatsapp text-5xl mb-4 text-green-400"></i>
-                    <h3 class="text-xl font-bold mb-2">Support</h3>
-                    <p class="text-sm opacity-50 mb-6">Fragen vor Ort?</p>
-                    <a href="https://wa.me/491701234567" class="inline-block bg-[#F3D1D1] text-black font-bold py-3 px-8 rounded-xl">WhatsApp Chat</a>
+                <div class="bg-white/5 p-10 rounded-3xl text-center border border-white/5">
+                    <div class="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="fab fa-whatsapp text-4xl text-green-400"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-2 uppercase italic">Event Support</h3>
+                    <p class="text-sm opacity-50 mb-8">Du hast Fragen zum Ablauf oder brauchst Hilfe vor Ort?</p>
+                    <a href="https://wa.me/491701234567" class="inline-block bg-[#F3D1D1] text-black font-black py-4 px-10 rounded-2xl uppercase tracking-tighter">WhatsApp Chat</a>
                 </div>`;
-        }
-
-        function showHome() {
-            document.getElementById('home-view').classList.remove('hidden');
-            document.getElementById('detail-view').classList.add('hidden');
-            document.getElementById('back-btn').classList.add('pointer-events-none', 'opacity-0');
         }
 
         checkUser();
