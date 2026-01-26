@@ -144,7 +144,7 @@
 
         function changeDay(day, btn) {
             currentDay = day;
-            openCats.clear(); // RESET: Alle Gruppen beim Tagwechsel zuklappen
+            openCats.clear(); 
             document.querySelectorAll('.day-tab').forEach(t => t.classList.remove('active'));
             btn.classList.add('active');
             renderAgenda();
@@ -213,17 +213,25 @@
         }
 
         async function toggleFav(id) {
-            const btn = document.getElementById(`fav-${id}`);
-            const isFav = btn.classList.contains('is-fav');
+            // WICHTIG: Suche alle Buttons mit dieser ID (da sie in Agenda und My Plan vorkommen können)
+            const btns = document.querySelectorAll(`[id="fav-${id}"]`);
+            const isFav = btns[0] ? btns[0].classList.contains('is-fav') : false;
             const { data: { user } } = await supabaseClient.auth.getUser();
 
-            if (isFav) { btn.classList.remove('is-fav'); btn.classList.add('opacity-10'); }
-            else { btn.classList.add('is-fav'); btn.classList.remove('opacity-10'); }
+            // UI Update für alle Instanzen dieses Buttons
+            btns.forEach(btn => {
+                if (isFav) { btn.classList.remove('is-fav'); btn.classList.add('opacity-10'); }
+                else { btn.classList.add('is-fav'); btn.classList.remove('opacity-10'); }
+            });
 
+            // DB Update
             if (isFav) await supabaseClient.from('favorites').delete().eq('user_id', user.id).eq('agenda_id', id);
             else await supabaseClient.from('favorites').insert([{ user_id: user.id, agenda_id: id }]);
 
-            if (document.getElementById('view-title').innerText.toLowerCase() === 'my plan') renderMyPlan();
+            // Wenn im My Plan View, verzögert neu laden damit das Element nicht sofort unter dem Finger verschwindet
+            if (document.getElementById('view-title').innerText.toLowerCase() === 'my plan') {
+                setTimeout(renderMyPlan, 300);
+            }
         }
 
         async function renderMyPlan() {
@@ -237,7 +245,6 @@
                 return;
             }
 
-            // Gruppierung nach Datum für "My Plan"
             const groups = {};
             items.forEach(item => {
                 const dateStr = new Date(item.event_day).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
@@ -253,7 +260,7 @@
                             <p class="text-[10px] text-pink-300 font-bold">${item.start_time.slice(0,5)} ${item.location_name}</p>
                             <p class="font-bold text-sm uppercase">${item.title}</p>
                         </div>
-                        <button onclick="toggleFav('${item.id}')" class="text-2xl is-fav"><i class="fas fa-star"></i></button>
+                        <button id="fav-${item.id}" onclick="toggleFav('${item.id}')" class="text-2xl is-fav"><i class="fas fa-star"></i></button>
                     </div>
                 `).join('')}
             `).join('');
