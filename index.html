@@ -335,15 +335,24 @@
                     </div>`).join('')}</div>`;
         }
 
-        async function sendAdminNoti() {
-            const title = document.getElementById('admin-title').value;
-            const message = document.getElementById('admin-msg').value;
-            const target_group = document.getElementById('admin-group').value;
-            if(!title || !message) return alert("Fehlende Daten");
+       async function sendAdminNoti() {
+    const title = document.getElementById('admin-title').value;
+    const message = document.getElementById('admin-msg').value;
+    const target_group = document.getElementById('admin-group').value;
+    if(!title || !message) return alert("Fehlende Daten");
 
-            const { error } = await supabaseClient.from('notifications').insert([{ title, message, target_group }]);
-            if (error) alert(error.message); else { alert("Nachricht verschickt!"); showHome(); }
-        }
+    // 1. In Datenbank speichern (für die Liste in der App)
+    const { error: dbError } = await supabaseClient.from('notifications').insert([{ title, message, target_group }]);
+    
+    // 2. Push-Befehl an die Edge Function senden
+    fetch(FUNCTION_URL, {
+        method: 'POST',
+        body: JSON.stringify({ title, message, target_group })
+    });
+
+    if (dbError) alert(dbError.message); 
+    else { alert("Nachricht & Push verschickt!"); showHome(); }
+}
 
         async function updateUserGroup(uid, group) {
             await supabaseClient.from('profiles').update({ user_group: group }).eq('id', uid);
@@ -375,6 +384,7 @@
     </script>
 </body>
 </html>
+
 
 
 
