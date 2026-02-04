@@ -92,19 +92,16 @@
         </div>
     </div>
 
- <script>
+<script>
         const SUPABASE_URL = 'https://eljpoxtfxfbgnpteyrsq.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_Tjfcf2J34DrY0sHsdpXgLw_y2_0A_rm';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // HIER NUR NOCH DIESE DREI VARIABLEN:
         const ADMIN_EMAILS = ['mail.christian.falter@gmail.com']; 
         const PUBLIC_VAPID_KEY = 'BDOA_H6Xf5n8-f7G9yMvT8p7uWzL4zR1nQ2bV3cX4dY5eZ6fA7gB8hC9iD0jE1kF2lG';
         const FUNCTION_URL = 'https://eljpoxtfxfbgnpteyrsq.supabase.co/functions/v1/send-push';
 
         let currentDay = '2026-03-23';
-        // ... Rest des Codes bleibt gleich
-     
         let openCats = new Set(); 
         let activeView = 'home';
 
@@ -117,16 +114,53 @@
                     document.getElementById('admin-tile').classList.remove('hidden');
                 }
                 checkNewNotifications();
-                if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.register('/sw.js').catch(e => console.log("SW Error", e));
-                }
             } else { showLogin(); }
         }
 
-        function showApp() {
+        async function showApp() {
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('protected-content').classList.remove('hidden');
             document.getElementById('noti-btn').classList.remove('hidden');
+            
+            // NEU: Push Benachrichtigungen einrichten
+            setupPushNotifications();
+        }
+
+        async function setupPushNotifications() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                console.log("Push wird nicht unterstützt");
+                return;
+            }
+
+            try {
+                // 1. Service Worker registrieren
+                const registration = await navigator.serviceWorker.register('/sw.js');
+                console.log("Service Worker registriert");
+
+                // 2. Erlaubnis abfragen
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    console.log("Push-Erlaubnis verweigert");
+                    return;
+                }
+
+                // 3. Subscription vom Browser holen
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: PUBLIC_VAPID_KEY
+                });
+
+                // 4. In Supabase speichern
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                if (user) {
+                    await supabaseClient.from('profiles').update({ 
+                        push_subscription: JSON.stringify(subscription) 
+                    }).eq('id', user.id);
+                    console.log("Push-Subscription in Datenbank gespeichert");
+                }
+            } catch (error) {
+                console.error("Fehler bei Push-Setup:", error);
+            }
         }
 
         function showLogin() {
@@ -178,7 +212,6 @@
             document.getElementById('back-btn').classList.remove('opacity-0', 'pointer-events-none');
             document.getElementById('view-title').innerText = view.replace('-', ' ');
             
-            // Day-Picker Sichtbarkeit
             const hasDayPicker = (view === 'agenda' || view === 'my-plan');
             document.getElementById('day-picker').classList.toggle('hidden', !hasDayPicker);
 
@@ -335,24 +368,22 @@
                     </div>`).join('')}</div>`;
         }
 
-       async function sendAdminNoti() {
-    const title = document.getElementById('admin-title').value;
-    const message = document.getElementById('admin-msg').value;
-    const target_group = document.getElementById('admin-group').value;
-    if(!title || !message) return alert("Fehlende Daten");
+        async function sendAdminNoti() {
+            const title = document.getElementById('admin-title').value;
+            const message = document.getElementById('admin-msg').value;
+            const target_group = document.getElementById('admin-group').value;
+            if(!title || !message) return alert("Fehlende Daten");
 
-    // 1. In Datenbank speichern (für die Liste in der App)
-    const { error: dbError } = await supabaseClient.from('notifications').insert([{ title, message, target_group }]);
-    
-    // 2. Push-Befehl an die Edge Function senden
-    fetch(FUNCTION_URL, {
-        method: 'POST',
-        body: JSON.stringify({ title, message, target_group })
-    });
+            const { error: dbError } = await supabaseClient.from('notifications').insert([{ title, message, target_group }]);
+            
+            fetch(FUNCTION_URL, {
+                method: 'POST',
+                body: JSON.stringify({ title, message, target_group })
+            });
 
-    if (dbError) alert(dbError.message); 
-    else { alert("Nachricht & Push verschickt!"); showHome(); }
-}
+            if (dbError) alert(dbError.message); 
+            else { alert("Nachricht & Push verschickt!"); showHome(); }
+        }
 
         async function updateUserGroup(uid, group) {
             await supabaseClient.from('profiles').update({ user_group: group }).eq('id', uid);
@@ -384,10 +415,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
